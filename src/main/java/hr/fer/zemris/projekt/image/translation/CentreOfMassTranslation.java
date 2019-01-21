@@ -59,11 +59,4 @@ public class CentreOfMassTranslation implements IImageFilter {
 
         return centeredImage;
     }
-
-    @Override
-    public int[][] apply(int[][] image, int width, int height) {
-        return new int[0][];
-    }
-
-
 }

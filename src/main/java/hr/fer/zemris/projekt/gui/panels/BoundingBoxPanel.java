@@ -14,7 +14,7 @@ import java.awt.event.MouseMotionListener;
 import java.util.ArrayList;
 import java.util.List;
 
-public class BoundingBoxPanel extends JPanel implements MouseMotionListener, MouseListener, IDrawingStatusListener {
+public class BoundingBoxPanel extends ZoomablePanel implements MouseMotionListener, MouseListener, IDrawingStatusListener {
 
     private static final double DISTANCE_TO_RECTANGLE = 0.5;
     private static final int CLASSIFICATION_BOX_WIDTH = 16;
@@ -37,11 +37,17 @@ public class BoundingBoxPanel extends JPanel implements MouseMotionListener, Mou
 
 
     public BoundingBoxPanel(List<BoundingBox> boxes, int selectedIndex) {
+        addMouseWheelListener(this);
+        addMouseListener(this);
+        addMouseMotionListener(this);
         this.boxes = boxes;
         this.selectedBox = selectedIndex;
     }
 
     public BoundingBoxPanel(IBoundingBoxModelChangeListener listener, IBoundingBoxSelectListener selectListener) {
+        addMouseWheelListener(this);
+        addMouseListener(this);
+        addMouseMotionListener(this);
         this.boxes = new ArrayList<>();
         this.classifications = new ArrayList<>();
         this.selectedBox = -1;
@@ -75,6 +81,9 @@ public class BoundingBoxPanel extends JPanel implements MouseMotionListener, Mou
         Graphics2D g2d = (Graphics2D) g;
         g2d.setColor(Color.BLUE);
 
+        g2d = transformGraphics(g2d);
+        changeSizeDependingOnZoom();
+
         int size = boxes.size();
         for (int i = 0; i < size; i++) {
             BoundingBox box = boxes.get(i);
@@ -92,6 +101,21 @@ public class BoundingBoxPanel extends JPanel implements MouseMotionListener, Mou
 
             drawClassificationBox(g2d, i, point, width, height);
             g2d.setColor(Color.BLUE);
+        }
+    }
+
+    private void changeSizeDependingOnZoom() {
+        int newWidth = getWidth();
+        int newHeight = getHeight();
+
+        if (width > newWidth) {
+            newWidth = width;
+        }
+        if (height > newHeight) {
+            newHeight = height;
+        }
+        if (newWidth != getWidth() || newHeight != getHeight()) {
+            setSize(new Dimension(newWidth, newHeight));
         }
     }
 
@@ -123,15 +147,15 @@ public class BoundingBoxPanel extends JPanel implements MouseMotionListener, Mou
                 return;
             }
             if (counter == 0) {
-                startX = e.getX();
-                startY = e.getY();
+                startX = getRealXLocation(e);
+                startY = getRealYLocation(e);
                 temporary = new BoundingBox(new Point(startX, startY), 1, 1);
                 boxes.add(temporary);
                 counter++;
                 return;
             }
-            endX = e.getX();
-            endY = e.getY();
+            endX = getRealXLocation(e);
+            endY = getRealYLocation(e);
 
             temporary = null;
             boxes.remove(boxes.size() - 1);
@@ -148,10 +172,10 @@ public class BoundingBoxPanel extends JPanel implements MouseMotionListener, Mou
 
         } else {
             if (e.getClickCount() == 2 && SwingUtilities.isLeftMouseButton(e)) {
-                int index = distance(new Point(e.getX(), e.getY()));
+                int index = distance(new Point(getRealXLocation(e), getRealYLocation(e)));
                 selectListener.selectedForEdit(index);
             } else if (e.getClickCount() == 1 && SwingUtilities.isLeftMouseButton(e)) {
-                int index = distance(new Point(e.getX(), e.getY()));
+                int index = distance(new Point(getRealXLocation(e), getRealYLocation(e)));
                 selectListener.selected(index);
 
             }
@@ -162,13 +186,13 @@ public class BoundingBoxPanel extends JPanel implements MouseMotionListener, Mou
     @Override
     public void mouseMoved(MouseEvent e) {
         if (drawingEnabled && counter != 0) {
-            endX = e.getX();
-            endY = e.getY();
+            endX = getRealXLocation(e);
+            endY = getRealYLocation(e);
             int newX = endX - startX;
             int newY = endY - startY;
 
-            int maxX = getMaximumSize().width;
-            int maxY = getMaximumSize().height;
+            int maxX = width;
+            int maxY = height;
             if (startX + newX > maxX) {
                 newX = maxX - startX;
             }

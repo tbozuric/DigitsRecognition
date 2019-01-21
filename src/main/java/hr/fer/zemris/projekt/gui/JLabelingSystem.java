@@ -26,6 +26,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.net.CookieManager;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -83,8 +84,9 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
 
         listeners = new ArrayList<>();
 
+
         imagePanel = new ImagePanel();
-        boundingBoxPanel = new BoundingBoxPanel(this, this);
+        boundingBoxPanel = new BoundingBoxPanel( this, this);
         listeners.add(((BoundingBoxPanel) boundingBoxPanel));
 
         initActions();
@@ -92,6 +94,18 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
         initGui();
 
         addWindowListener();
+        addResizeListener();
+    }
+
+    private void addResizeListener() {
+        addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                super.componentResized(e);
+                imagePanel.setBounds(0, 0, getWidth(), getHeight());
+                boundingBoxPanel.setBounds(0, 0, getWidth(), getHeight());
+            }
+        });
     }
 
 
@@ -114,16 +128,22 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
         buttonsPanel.add(nextImageBtn);
         buttonsPanel.add(addBoundingBox);
 
-        add(new JScrollPane(layeredPane), BorderLayout.CENTER);
+
+
+        JScrollPane pane = new JScrollPane(layeredPane);
+        add(pane, BorderLayout.CENTER);
+
 
         imagePanel.setOpaque(false);
         imagePanel.setBounds(0, 0, getWidth(), getHeight());
+
 
         boundingBoxPanel.setOpaque(false);
         boundingBoxPanel.setBounds(0, 0, getWidth(), getHeight());
 
         layeredPane.add(imagePanel, JLayeredPane.FRAME_CONTENT_LAYER);
         layeredPane.add(boundingBoxPanel, JLayeredPane.MODAL_LAYER);
+        adjustScrollPaneComponentListener(pane);
 
         add(buttonsPanel, BorderLayout.PAGE_START);
 
@@ -147,6 +167,18 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
         listPanel.add(new JScrollPane(boundingBoxes));
 
         add(listPanel, BorderLayout.LINE_END);
+    }
+
+    private void adjustScrollPaneComponentListener(JScrollPane pane) {
+        imagePanel.addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                super.componentResized(e);
+                layeredPane.setPreferredSize(e.getComponent().getSize());
+                pane.revalidate();
+                pane.repaint();
+            }
+        });
     }
 
 
@@ -221,11 +253,12 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
             File directory = directoryChooser.getSelectedFile();
 
             DefaultListModel<String> imagesInDirectoryModel = new DefaultListModel<>();
+            Set<String> imagesSet = new TreeSet<>();
             FilenameFilter imageFilter = new ImageFilter();
             if (directory.isDirectory()) {
                 File[] images = directory.listFiles(imageFilter);
                 for (File image : images) {
-                    imagesInDirectoryModel.addElement(image.getName());
+                    imagesSet.add(image.getName());
                     imagesByName.put(image.getName(), image.toPath());
                 }
             }
@@ -233,6 +266,10 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
                 JOptionPane.showMessageDialog(JLabelingSystem.this, MESSAGE_NO_IMAGES_IN_DIR,
                         INFORMATION, JOptionPane.INFORMATION_MESSAGE);
                 return;
+            }
+
+            for (String image : imagesSet) {
+                imagesInDirectoryModel.addElement(image);
             }
 
             loadDataset.setEnabled(true);
@@ -390,7 +427,7 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
             JOptionPane.showMessageDialog(JLabelingSystem.this,
                     MESSAGE_SAVE_IN_JVC_FORMAT,
                     INFORMATION, JOptionPane.INFORMATION_MESSAGE);
-            path = Paths.get(pathString.substring(0, pathString.length()), ".jvc");
+            path = Paths.get(pathString + ".jvc");
         } else {
             path = Paths.get(pathString.substring(0, pathString.indexOf(".")), ".jvc");
         }
@@ -587,8 +624,6 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
                 ((BoundingBoxPanel) boundingBoxPanel).setSelectedBox(-1);
                 imagePanel.revalidate();
                 imagePanel.repaint();
-
-                boundingBoxPanel.setMaximumSize(new Dimension(image.getWidth(), image.getHeight()));
 
                 this.boundingBoxes.revalidate();
                 this.boundingBoxes.repaint();
