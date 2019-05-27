@@ -5,7 +5,7 @@ import hr.fer.zemris.projekt.image.IImageFilter;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 
-import static hr.fer.zemris.projekt.image.utils.ImageUtils.colorToRGB;
+import static hr.fer.zemris.projekt.image.managers.ImageManager.colorToRGB;
 
 public class ZhangSeunThinningFilter implements IImageFilter {
 
@@ -48,7 +48,7 @@ public class ZhangSeunThinningFilter implements IImageFilter {
         int newPixel;
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
-                int color = 255 - image[x][y] * 255;
+                int color = image[x][y] * 255;
                 newPixel = colorToRGB(255, color, color, color);
                 newImage.setRGB(x, y, newPixel);
             }

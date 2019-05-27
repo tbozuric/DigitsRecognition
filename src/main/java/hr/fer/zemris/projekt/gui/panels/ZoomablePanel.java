@@ -9,6 +9,8 @@ import java.awt.geom.AffineTransform;
 
 public class ZoomablePanel extends JPanel implements MouseWheelListener {
 
+    private static final double ZOOM_SCALER = 1.1;
+
     static double zoomFactor = 1;
     protected static int width;
     protected static int height;
@@ -16,24 +18,34 @@ public class ZoomablePanel extends JPanel implements MouseWheelListener {
     @Override
     public void mouseWheelMoved(MouseWheelEvent e) {
         //Zoom in
-        if (e.getWheelRotation() < 0) {
-            setZoomFactor(1.1 * zoomFactor);
-            repaint();
+        if (e.isControlDown()) {
+            if (e.getWheelRotation() < 0) {
+                zoomIn();
+            }
+            //Zoom out
+            if (e.getWheelRotation() > 0) {
+                zoomOut();
+            }
+        } else {
+            getParent().dispatchEvent(e);
         }
-        //Zoom out
-        if (e.getWheelRotation() > 0) {
-            setZoomFactor(zoomFactor / 1.1);
-            repaint();
-        }
+    }
+
+    public void zoomOut() {
+        setZoomFactor(zoomFactor / ZOOM_SCALER);
+        revalidate();
+        repaint();
+    }
+
+    public void zoomIn() {
+        setZoomFactor(ZOOM_SCALER * zoomFactor);
+        revalidate();
+        repaint();
     }
 
 
     private void setZoomFactor(double factor) {
-        if (factor < zoomFactor) {
-            zoomFactor = zoomFactor / 1.1;
-        } else {
-            zoomFactor = factor;
-        }
+        zoomFactor = factor;
         if (zoomFactor < 0.1) {
             zoomFactor = 0.1;
         }

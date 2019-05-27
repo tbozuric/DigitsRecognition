@@ -1,6 +1,6 @@
 package hr.fer.zemris.projekt.image;
 
-import hr.fer.zemris.projekt.image.utils.ImageUtils;
+import hr.fer.zemris.projekt.image.managers.ImageManager;
 
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
@@ -29,14 +29,12 @@ public class ImageTransformer {
     }
 
     public void removeImageFilter(IImageFilter filter) {
-        if (imageFilters.contains(filter)) {
-            imageFilters.remove(filter);
-        }
+        imageFilters.remove(filter);
     }
 
 
     public BufferedImage transform(BufferedImage image) {
-        BufferedImage clone = ImageUtils.deepCopy(image);
+        BufferedImage clone = ImageManager.deepCopy(image);
         for (IImageFilter filter : imageFilters) {
             clone = filter.apply(clone);
         }
@@ -44,7 +42,7 @@ public class ImageTransformer {
     }
 
     public BufferedImage transform(BufferedImage image, List<IImageFilter> filters) {
-        BufferedImage clone = ImageUtils.deepCopy(image);
+        BufferedImage clone = ImageManager.deepCopy(image);
         for (IImageFilter filter : filters) {
             clone = filter.apply(clone);
         }
@@ -53,7 +51,7 @@ public class ImageTransformer {
 
 
     public BufferedImage transform(BufferedImage image, IImageFilter filter) {
-        BufferedImage clone = ImageUtils.deepCopy(image);
+        BufferedImage clone = ImageManager.deepCopy(image);
         return filter.apply(clone);
     }
 

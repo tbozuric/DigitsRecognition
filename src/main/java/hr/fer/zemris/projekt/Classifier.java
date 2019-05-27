@@ -7,6 +7,7 @@ import hr.fer.zemris.projekt.image.border.BorderImage;
 import hr.fer.zemris.projekt.image.dilation.BinaryDilationFilter;
 import hr.fer.zemris.projekt.image.grayscale.BT709GrayscaleFilter;
 import hr.fer.zemris.projekt.image.interpolation.NearestNeighborInterpolation;
+import hr.fer.zemris.projekt.image.translation.CentreOfMassTranslation;
 import org.datavec.image.loader.NativeImageLoader;
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.nd4j.linalg.api.ndarray.INDArray;
@@ -24,7 +25,7 @@ import java.util.Objects;
 
 public class Classifier {
     private static final int NUMBER_OF_CHANNELS = 1;
-    private static Classifier classifier;
+    private static Classifier classifier = new Classifier();
 
     private static final int IMAGE_HEIGHT = 28;
     private static final int IMAGE_WIDTH = 28;
@@ -32,6 +33,7 @@ public class Classifier {
     private List<IImageFilter> imageFilters;
 
     private Classifier() {
+
         transformer = ImageTransformer.getInstance();
         imageFilters = new ArrayList<>();
 
@@ -41,18 +43,18 @@ public class Classifier {
         imageFilters.add(new BorderImage());
         imageFilters.add(new BinaryDilationFilter());
         imageFilters.add(new NearestNeighborInterpolation(IMAGE_WIDTH, IMAGE_HEIGHT));
+        imageFilters.add(new CentreOfMassTranslation());
+
     }
 
     public static Classifier getInstance() {
-        if (classifier == null) {
-            classifier = new Classifier();
-        }
         return classifier;
     }
 
-    public int classify(MultiLayerNetwork net, BufferedImage image) throws IOException {
+    private INDArray loadImage(MultiLayerNetwork net, BufferedImage image) throws IOException {
         Objects.requireNonNull(net, "Classifier must not be null!");
         Objects.requireNonNull(image, "Image must not be null!");
+
 
         BufferedImage binary = transformer.transform(image, imageFilters);
 
@@ -64,6 +66,18 @@ public class Classifier {
         INDArray imageAsArray = imageLoader.asMatrix(new ByteArrayInputStream(arrayOutputStream.toByteArray()));
         DataNormalization scaler = new ImagePreProcessingScaler(0, 1);
         scaler.transform(imageAsArray);
+        return imageAsArray;
+    }
+
+    public int classify(MultiLayerNetwork net, BufferedImage image) throws IOException {
+        INDArray imageAsArray = loadImage(net, image);
         return net.predict(imageAsArray)[0];
+    }
+
+    public double[] outputProbabilities(MultiLayerNetwork net, BufferedImage image) throws IOException {
+        INDArray imageAsArray = loadImage(net, image);
+        INDArray output = net.output(imageAsArray);
+
+        return output.data().asDouble();
     }
 }

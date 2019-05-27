@@ -18,6 +18,8 @@ public class ImagePanel extends ZoomablePanel {
 
     public void setImage(BufferedImage image) {
         this.image = image;
+        width = image.getWidth();
+        height = image.getHeight();
     }
 
 
@@ -33,9 +35,7 @@ public class ImagePanel extends ZoomablePanel {
 
     private void changeSizeDependingOnZoom() {
         if (image != null) {
-            width = (int) (image.getWidth() * zoomFactor);
-            height = (int) (image.getHeight() * zoomFactor);
-            setSize(new Dimension(width, height));
+            setSize(new Dimension((int) (image.getWidth() * zoomFactor),(int) (image.getHeight() * zoomFactor)));
         }
     }
 }

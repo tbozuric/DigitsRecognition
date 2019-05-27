@@ -1,7 +1,7 @@
 package hr.fer.zemris.projekt.image.dilation;
 
 import hr.fer.zemris.projekt.image.IImageFilter;
-import hr.fer.zemris.projekt.image.utils.ImageUtils;
+import hr.fer.zemris.projekt.image.managers.ImageManager;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -49,7 +49,7 @@ public class BinaryDilationFilter implements IImageFilter {
                 int currentX = x + dx;
                 int currentY = y + dy;
                 if (currentX >= 0 && currentX < width && currentY >= 0 && currentY < height) {
-                    image.setRGB(currentX, currentY, ImageUtils.colorToRGB(255, WHITE, WHITE, WHITE));
+                    image.setRGB(currentX, currentY, ImageManager.colorToRGB(255, WHITE, WHITE, WHITE));
                 }
             }
         }

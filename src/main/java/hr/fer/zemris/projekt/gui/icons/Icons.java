@@ -66,6 +66,9 @@ public class Icons {
         icons.put("box", resizeImage("box.png"));
         icons.put("open", resizeImage("open.png"));
         icons.put("load", resizeImage("load.png"));
+        icons.put("retrain", resizeImage("repeat.png"));
+        icons.put("zoom-in", resizeImage("zoom-in.png"));
+        icons.put("zoom-out", resizeImage("zoom-out.png"));
 
     }
 

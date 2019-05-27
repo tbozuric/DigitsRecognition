@@ -1,6 +1,7 @@
 package hr.fer.zemris.projekt.parser;
 
 import hr.fer.zemris.projekt.exceptions.FileFormatException;
+import hr.fer.zemris.projekt.gui.models.BoxPredictionViewModel;
 import hr.fer.zemris.projekt.gui.models.LabeledImageModel;
 import hr.fer.zemris.projekt.image.models.BoundingBox;
 import hr.fer.zemris.projekt.image.models.Point;
@@ -10,14 +11,14 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 
 public class JVCFileParser {
     private static final int NUMBER_OF_CHUNKS_IN_LINE = 5;
-    private static JVCFileParser parser;
+    private static JVCFileParser parser = new JVCFileParser();
 
 
     private JVCFileParser() {
@@ -25,30 +26,27 @@ public class JVCFileParser {
     }
 
     public static JVCFileParser getParserInstance() {
-        if (parser == null) {
-            parser = new JVCFileParser();
-        }
         return parser;
     }
 
     public Map<Path, LabeledImageModel> parse(Path file) throws IOException, FileFormatException {
         Map<Path, LabeledImageModel> classifiedImages = new HashMap<>();
+
         try (BufferedReader br = Files.newBufferedReader(file)) {
             String line;
             Path path;
             boolean readPath = false;
-            List<BoundingBox> boundingBoxes = new ArrayList<>();
-            List<Integer> classifications = new ArrayList<>();
+            Set<BoxPredictionViewModel> viewModels = new TreeSet<>();
             LabeledImageModel imageModel = new LabeledImageModel();
+
             while ((line = br.readLine()) != null) {
                 line = line.trim();
+
                 if (line.startsWith(">")) {
                     if (readPath) {
-                        imageModel.setBoundingBoxes(new ArrayList<>(boundingBoxes));
-                        imageModel.setClassifications(new ArrayList<>(classifications));
+                        imageModel.setViewModels(viewModels);
                         classifiedImages.put(imageModel.getPath(), imageModel);
-                        classifications = new ArrayList<>();
-                        boundingBoxes = new ArrayList<>();
+                        viewModels = new TreeSet<>();
                         imageModel = new LabeledImageModel();
                     }
                     line = line.substring(1);
@@ -60,16 +58,17 @@ public class JVCFileParser {
                     if (parts.length != NUMBER_OF_CHUNKS_IN_LINE) {
                         throw new FileFormatException("File is in illegal format.");
                     }
-                    BoundingBox box = new BoundingBox(new Point(Integer.parseInt(parts[0]), Integer.parseInt(parts[1])),
+
+                    BoundingBox box = new BoundingBox(Point.create(Integer.parseInt(parts[0]), Integer.parseInt(parts[1])),
                             Integer.parseInt(parts[2]), Integer.parseInt(parts[3]));
 
-                    Integer classOfDigit = Integer.valueOf(parts[4]);
-                    boundingBoxes.add(box);
-                    classifications.add(classOfDigit);
+                    int classOfDigit = Integer.parseInt(parts[4]);
+                    viewModels.add(new BoxPredictionViewModel(box, classOfDigit));
+
                 }
             }
-            imageModel.setBoundingBoxes(new ArrayList<>(boundingBoxes));
-            imageModel.setClassifications(new ArrayList<>(classifications));
+
+            imageModel.setViewModels(viewModels);
             classifiedImages.put(imageModel.getPath(), imageModel);
         }
         return classifiedImages;

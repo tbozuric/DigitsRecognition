@@ -14,7 +14,7 @@ public class JListKeyNavigationListener<T> extends KeyAdapter {
 
     @Override
     public void keyPressed(KeyEvent e) {
-        if (e.getKeyCode() == 61) {
+        if (e.getKeyCode() == KeyEvent.VK_PLUS || e.getKeyCode() == KeyEvent.VK_ADD) {
             int selectedIndex = list.getSelectedIndex();
             int maxIndex = list.getModel().getSize() - 1;
             if (selectedIndex != -1) {
@@ -25,7 +25,7 @@ public class JListKeyNavigationListener<T> extends KeyAdapter {
                 }
             }
 
-        } else if (e.getKeyCode() == KeyEvent.VK_MINUS) {
+        } else if (e.getKeyCode() == KeyEvent.VK_MINUS || e.getKeyCode() == KeyEvent.VK_SUBTRACT) {
             int selectedIndex = list.getSelectedIndex();
             if (selectedIndex != -1) {
                 if (selectedIndex - 1 >= 0) {

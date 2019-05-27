@@ -1,7 +1,7 @@
 package hr.fer.zemris.projekt.image.border;
 
 import hr.fer.zemris.projekt.image.IImageFilter;
-import hr.fer.zemris.projekt.image.utils.ImageUtils;
+import hr.fer.zemris.projekt.image.managers.ImageManager;
 
 import java.awt.image.BufferedImage;
 
@@ -30,7 +30,7 @@ public class BorderImage implements IImageFilter {
         for (int x = 0; x < newWidth; x++) {
             for (int y = 0; y < newHeight; y++) {
                 if (x < BORDER_WIDTH || x > BORDER_WIDTH + width || y < BORDER_WIDTH || y > BORDER_WIDTH + height) {
-                    clone.setRGB(x, y, ImageUtils.colorToRGB(255, BLACK, BLACK, BLACK));
+                    clone.setRGB(x, y, ImageManager.colorToRGB(255, BLACK, BLACK, BLACK));
                 }
             }
         }

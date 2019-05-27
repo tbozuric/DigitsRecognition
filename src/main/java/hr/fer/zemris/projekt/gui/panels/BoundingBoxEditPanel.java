@@ -1,17 +1,17 @@
 package hr.fer.zemris.projekt.gui.panels;
 
-import hr.fer.zemris.projekt.image.models.BoundingBox;
+import hr.fer.zemris.projekt.gui.models.BoxPredictionViewModel;
+import hr.fer.zemris.projekt.gui.services.RandomColorChooser;
 import hr.fer.zemris.projekt.image.models.Point;
 
 import javax.swing.*;
 import java.awt.*;
-import java.util.List;
 
 public class BoundingBoxEditPanel extends GeometricalObjectEditor {
 
-    private int index;
-    private BoundingBox boundingBox;
-    private List<Integer> classifications;
+    private BoxPredictionViewModel viewModel;
+    private BoxPredictionViewModel copyOfViewModel;
+    private JComponent parent;
 
     private SpinnerNumberModel modelStartX;
     private SpinnerNumberModel modelStartY;
@@ -19,23 +19,21 @@ public class BoundingBoxEditPanel extends GeometricalObjectEditor {
     private SpinnerNumberModel modelHeight;
     private SpinnerNumberModel modelClassificationNumber;
 
-    public BoundingBoxEditPanel(int maxWidth, int maxHeight, BoundingBox boundingBox, List<Integer> classifications,
-                                int index) {
+    public BoundingBoxEditPanel(JComponent parent, int maxWidth, int maxHeight, BoxPredictionViewModel viewModel) {
         super(maxWidth, maxHeight);
-        this.boundingBox = boundingBox;
-        this.index = index;
-        this.classifications = classifications;
-        this.index = index;
+        this.parent = parent;
+        this.viewModel = viewModel;
+        this.copyOfViewModel = viewModel.deepCopy();
         constructDialog();
     }
 
     private void constructDialog() {
         setLayout(new GridLayout(0, 2));
-        Point upLeft = boundingBox.getUpLeft();
+        Point upLeft = viewModel.getBoundingBox().getUpLeft();
         int x = upLeft.getX();
         int y = upLeft.getY();
-        int width = boundingBox.getWidth();
-        int height = boundingBox.getHeight();
+        int width = viewModel.getBoundingBox().getWidth();
+        int height = viewModel.getBoundingBox().getHeight();
 
 
         //effectively we can make the coordinates free, without limitation
@@ -46,8 +44,14 @@ public class BoundingBoxEditPanel extends GeometricalObjectEditor {
         modelHeight = new SpinnerNumberModel(height, 0,
                 maxHeight - y, 1);
 
-        modelClassificationNumber = new SpinnerNumberModel((int) classifications.get(index),
+        modelClassificationNumber = new SpinnerNumberModel(viewModel.getPrediction(),
                 0, 9, 1);
+
+
+        addChangeListener(modelStartX);
+        addChangeListener(modelStartY);
+        addChangeListener(modelHeight);
+        addChangeListener(modelWidth);
 
         add(new JLabel("Change start x coordinate"));
         add(new JSpinner(modelStartX));
@@ -64,9 +68,30 @@ public class BoundingBoxEditPanel extends GeometricalObjectEditor {
 
     @Override
     public void acceptEditing() {
-        boundingBox.setUpLeft(new Point(modelStartX.getNumber().intValue(), modelStartY.getNumber().intValue()));
-        boundingBox.setWidth(modelWidth.getNumber().intValue());
-        boundingBox.setHeight(modelHeight.getNumber().intValue());
-        classifications.set(index, modelClassificationNumber.getNumber().intValue());
+        viewModel.getBoundingBox().setUpLeft(Point.create(modelStartX.getNumber().intValue(), modelStartY.getNumber().intValue()));
+        viewModel.getBoundingBox().setWidth(modelWidth.getNumber().intValue());
+        viewModel.getBoundingBox().setHeight(modelHeight.getNumber().intValue());
+        viewModel.getBoundingBox().setGroupColor(RandomColorChooser.getColorForPrediction(modelClassificationNumber.getNumber().intValue()));
+        viewModel.setPrediction(modelClassificationNumber.getNumber().intValue());
+
+        parent.revalidate();
+        parent.repaint();
+    }
+
+    @Override
+    public void cancelEditing() {
+        viewModel.getBoundingBox().setUpLeft(Point.create(copyOfViewModel.getBoundingBox().getUpLeft().getX(),
+                copyOfViewModel.getBoundingBox().getUpLeft().getY()));
+        viewModel.getBoundingBox().setWidth(copyOfViewModel.getBoundingBox().getWidth());
+        viewModel.getBoundingBox().setHeight(copyOfViewModel.getBoundingBox().getHeight());
+
+        viewModel.setPrediction(copyOfViewModel.getPrediction());
+        parent.revalidate();
+        parent.repaint();
+
+    }
+
+    private void addChangeListener(SpinnerNumberModel model) {
+        model.addChangeListener(e -> acceptEditing());
     }
 }

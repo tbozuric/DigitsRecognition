@@ -19,4 +19,6 @@ public abstract class GeometricalObjectEditor extends JPanel {
     }
 
     public abstract void acceptEditing();
+
+    public abstract void cancelEditing();
 }

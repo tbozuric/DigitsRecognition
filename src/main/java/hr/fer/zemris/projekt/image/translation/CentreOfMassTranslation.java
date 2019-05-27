@@ -42,6 +42,7 @@ public class CentreOfMassTranslation implements IImageFilter {
 
         int dx = centerOfImageX - centerX;
         int dy = centerOfImageY - centerY;
+
         Graphics2D g2d = (Graphics2D) centeredImage.getGraphics();
         g2d.setColor(new Color(0, 0, 0, originalImage.getType()));
         g2d.fillRect(0, 0, width, height);

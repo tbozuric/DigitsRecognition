@@ -1,7 +1,7 @@
 package hr.fer.zemris.projekt.image.binarization;
 
 import hr.fer.zemris.projekt.image.IImageFilter;
-import hr.fer.zemris.projekt.image.utils.ImageUtils;
+import hr.fer.zemris.projekt.image.managers.ImageManager;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -38,7 +38,7 @@ public class OtsuBinarization implements IImageFilter {
                     binarizedPixel = WHITE;
                 }
 
-                binarizedPixel = ImageUtils.colorToRGB(255, binarizedPixel, binarizedPixel, binarizedPixel);
+                binarizedPixel = ImageManager.colorToRGB(255, binarizedPixel, binarizedPixel, binarizedPixel);
                 binarizedImage.setRGB(x, y, binarizedPixel);
             }
         }
@@ -46,15 +46,11 @@ public class OtsuBinarization implements IImageFilter {
     }
 
     private int calculateOtsuThreshold(BufferedImage grayImage) {
-        return calculateOtsuThreshold(ImageUtils.bufferedGrayImageTo2DArray(grayImage),
-                grayImage.getWidth(), grayImage.getHeight());
-    }
+        int width = grayImage.getWidth();
+        int height = grayImage.getHeight();
 
-
-    private int calculateOtsuThreshold(int[][] image, int width, int height) {
-
-        int[] histogram = ImageUtils.getHistogramOfGrayImage(image, width, height);
-        int totalNumberOfPixels = width * height;
+        int[] histogram = ImageManager.getHistogramOfGrayImage(grayImage, width, height);
+        int totalNumberOfPixels =width * height;
 
         float sum = 0;
         for (int i = 0; i < 256; i++) {

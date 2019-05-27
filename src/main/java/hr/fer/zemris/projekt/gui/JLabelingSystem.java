@@ -1,20 +1,26 @@
 package hr.fer.zemris.projekt.gui;
 
-import hr.fer.zemris.projekt.Classifier;
 import hr.fer.zemris.projekt.exceptions.FileFormatException;
 import hr.fer.zemris.projekt.gui.filters.ImageFilter;
 import hr.fer.zemris.projekt.gui.icons.Icons;
+import hr.fer.zemris.projekt.gui.listeners.IBoundingBoxActionListener;
 import hr.fer.zemris.projekt.gui.listeners.IBoundingBoxModelChangeListener;
-import hr.fer.zemris.projekt.gui.listeners.IBoundingBoxSelectListener;
 import hr.fer.zemris.projekt.gui.listeners.IDrawingStatusListener;
 import hr.fer.zemris.projekt.gui.listeners.JListKeyNavigationListener;
+import hr.fer.zemris.projekt.gui.models.BoxPredictionViewModel;
 import hr.fer.zemris.projekt.gui.models.LabeledImageModel;
 import hr.fer.zemris.projekt.gui.panels.*;
+import hr.fer.zemris.projekt.gui.providers.MessageProvider;
+import hr.fer.zemris.projekt.gui.renderers.ColoredListRenderer;
+import hr.fer.zemris.projekt.gui.services.RandomColorChooser;
+import hr.fer.zemris.projekt.image.managers.ImageManager;
 import hr.fer.zemris.projekt.image.models.BoundingBox;
-import hr.fer.zemris.projekt.image.utils.ImageUtils;
+import hr.fer.zemris.projekt.image.segmentation.ConnectedComponent;
+import hr.fer.zemris.projekt.neural.ConvNetClassifier;
+import hr.fer.zemris.projekt.neural.INetwork;
+import hr.fer.zemris.projekt.neural.exceptions.RetrainNetworkException;
 import hr.fer.zemris.projekt.parser.JVCFileParser;
-import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
-import org.deeplearning4j.util.ModelSerializer;
+import org.apache.commons.math3.util.Pair;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -26,30 +32,32 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
-import java.net.CookieManager;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
 import java.util.List;
+import java.util.*;
 
-import static hr.fer.zemris.projekt.gui.providers.MessageProvider.*;
+public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeListener, IBoundingBoxActionListener {
 
-public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeListener, IBoundingBoxSelectListener {
+    private static final String ERROR = "error";
+    private static final String WARNING = "warning";
+    private static final String INFORMATION = "information";
+    private static final String NETWORK_PATH = "src/main/resources/digits-model_extended_6.zip";
 
 
-    private MultiLayerNetwork net;
+    private INetwork net;
+    private MessageProvider provider = MessageProvider.getInstance();
+
 
     private JList<String> imagesInSelectedDirectory;
-    private JList<BoundingBox> boundingBoxes;
+    private JList<BoxPredictionViewModel> boundingBoxes;
     private List<IDrawingStatusListener> listeners;
 
     private JPanel imagePanel;
     private JPanel boundingBoxPanel;
 
-    private JButton previousImageBtn;
-    private JButton nextImageBtn;
-    private JToggleButton addBoundingBox;
+    private JToggleButton addBoundingBoxBtn;
 
     private Map<String, Path> imagesByName;
     private Map<Path, LabeledImageModel> classifiedImages;
@@ -63,15 +71,15 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
     public JLabelingSystem() {
         setLocation(0, 0);
         setSize(1200, 800);
-        setTitle("Digits Labeling System");
+        setTitle(provider.get("title"));
         setLayout(new BorderLayout());
 
-
         try {
-            net = ModelSerializer.restoreMultiLayerNetwork(new File(NETWORK_PATH));
+            net = new ConvNetClassifier(new File(NETWORK_PATH));
         } catch (IOException e) {
             showNeuralClassifierError();
         }
+
 
         layeredPane = new JLayeredPane();
 
@@ -86,7 +94,7 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
 
 
         imagePanel = new ImagePanel();
-        boundingBoxPanel = new BoundingBoxPanel( this, this);
+        boundingBoxPanel = new BoundingBoxPanel(this, this);
         listeners.add(((BoundingBoxPanel) boundingBoxPanel));
 
         initActions();
@@ -114,23 +122,32 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
         JPanel buttonsPanel = new JPanel();
         buttonsPanel.setLayout(new FlowLayout());
 
-        previousImageBtn = new JButton(previousImage);
-        nextImageBtn = new JButton(nextImage);
-        addBoundingBox = new JToggleButton(addBoundingBoxAction);
-        addBoundingBox.setIcon(Icons.getInstance().getIcon("box"));
-        addBoundingBox.setText("Add bounding box");
+        JButton previousImageBtn = new JButton(previousImage);
+        JButton nextImageBtn = new JButton(nextImage);
+        addBoundingBoxBtn = new JToggleButton(addBoundingBoxAction);
+        JButton retrainNetworkBtn = new JButton(retrainNetwork);
+        JButton zoomInBtn = new JButton(zoomIn);
+        JButton zoomOutBtn = new JButton(zoomOut);
 
-        previousImageBtn.setEnabled(false);
+        previousImage.setEnabled(false);
         nextImage.setEnabled(false);
-        addBoundingBox.setEnabled(false);
+        addBoundingBoxBtn.setEnabled(false);
+        retrainNetwork.setEnabled(false);
+        zoomIn.setEnabled(false);
+        zoomOut.setEnabled(false);
 
         buttonsPanel.add(previousImageBtn);
         buttonsPanel.add(nextImageBtn);
-        buttonsPanel.add(addBoundingBox);
-
+        buttonsPanel.add(addBoundingBoxBtn);
+        buttonsPanel.add(retrainNetworkBtn);
+        buttonsPanel.add(zoomInBtn);
+        buttonsPanel.add(zoomOutBtn);
 
 
         JScrollPane pane = new JScrollPane(layeredPane);
+        pane.getVerticalScrollBar().setUnitIncrement(16);
+        pane.getHorizontalScrollBar().setUnitIncrement(16);
+
         add(pane, BorderLayout.CENTER);
 
 
@@ -149,22 +166,25 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
 
         imagesInSelectedDirectory.setSelectionMode(ListSelectionModel.SINGLE_INTERVAL_SELECTION);
         boundingBoxes.setSelectionMode(ListSelectionModel.SINGLE_INTERVAL_SELECTION);
+        boundingBoxes.setCellRenderer(new ColoredListRenderer());
+
         addListenerToList();
         addListenerToBoundingBoxesList();
 
         layeredPane.addMouseMotionListener((BoundingBoxPanel) boundingBoxPanel);
         layeredPane.addMouseListener((BoundingBoxPanel) boundingBoxPanel);
 
-        addBoundingBox.addItemListener(e -> {
+        addBoundingBoxBtn.addItemListener(e -> {
             for (IDrawingStatusListener listener : listeners) {
                 listener.statusChanged(e.getStateChange() == ItemEvent.SELECTED);
             }
         });
 
         JPanel listPanel = new JPanel();
-        listPanel.setLayout(new GridLayout(0, 2));
-        listPanel.add(new JScrollPane(imagesInSelectedDirectory));
+        listPanel.setLayout(new GridLayout(2, 0));
         listPanel.add(new JScrollPane(boundingBoxes));
+        listPanel.add(new JScrollPane(imagesInSelectedDirectory));
+
 
         add(listPanel, BorderLayout.LINE_END);
     }
@@ -186,6 +206,10 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
         Icons icons = Icons.getInstance();
         nextImage.putValue(Action.SMALL_ICON, icons.getIcon("next"));
         previousImage.putValue(Action.SMALL_ICON, icons.getIcon("previous"));
+        addBoundingBoxAction.putValue(Action.SMALL_ICON, icons.getIcon("box"));
+        retrainNetwork.putValue(Action.SMALL_ICON, icons.getIcon("retrain"));
+        zoomIn.putValue(Action.SMALL_ICON, icons.getIcon("zoom-in"));
+        zoomOut.putValue(Action.SMALL_ICON, icons.getIcon("zoom-out"));
         saveDataset.putValue(Action.SMALL_ICON, icons.getIcon("save"));
         exitAction.putValue(Action.SMALL_ICON, icons.getIcon("exit"));
         directoryChooser.putValue(Action.SMALL_ICON, icons.getIcon("open"));
@@ -211,25 +235,42 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
 
 
     private void showNeuralClassifierError() {
-        JOptionPane.showMessageDialog(JLabelingSystem.this, MESSAGE_NEURAL_NETWORK_ERROR,
-                "Error", JOptionPane.ERROR_MESSAGE);
+        JOptionPane.showMessageDialog(JLabelingSystem.this, provider.get("network_error"),
+                provider.get(ERROR), JOptionPane.ERROR_MESSAGE);
     }
 
 
-    private AbstractAction exitAction = new AbstractAction("Exit") {
+    private AbstractAction exitAction = new AbstractAction(provider.get("exit")) {
         @Override
         public void actionPerformed(ActionEvent e) {
             exitAction();
         }
     };
 
-    private AbstractAction directoryChooser = new AbstractAction("Select directory") {
+    private AbstractAction zoomIn = new AbstractAction(provider.get("zoom_in")) {
+        @Override
+        public void actionPerformed(ActionEvent actionEvent) {
+            ((ZoomablePanel) imagePanel).zoomIn();
+            ((ZoomablePanel) boundingBoxPanel).zoomIn();
+
+        }
+    };
+
+    private AbstractAction zoomOut = new AbstractAction(provider.get("zoom_out")) {
+        @Override
+        public void actionPerformed(ActionEvent actionEvent) {
+            ((ZoomablePanel) imagePanel).zoomOut();
+            ((ZoomablePanel) boundingBoxPanel).zoomOut();
+        }
+    };
+
+    private AbstractAction directoryChooser = new AbstractAction(provider.get("select_directory")) {
         @Override
         public void actionPerformed(ActionEvent e) {
             boolean clear = false;
             if (modified) {
                 int answer = JOptionPane.showConfirmDialog(JLabelingSystem.this,
-                        MESSAGE_SAVE_BEFORE_CHANGE_DIRECTORY, "Save changes",
+                        provider.get("save_before_change_directory"), provider.get("save_changes"),
                         JOptionPane.YES_NO_OPTION);
                 if (answer == JOptionPane.YES_OPTION) {
                     saveDataset();
@@ -239,7 +280,7 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
 
 
             JFileChooser directoryChooser = new JFileChooser();
-            directoryChooser.setDialogTitle(MESSAGE_SELECT_FOLDER_WITH_IMAGES);
+            directoryChooser.setDialogTitle(provider.get("select_folder_with_images"));
             directoryChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
             directoryChooser.setAcceptAllFileFilterUsed(false);
 
@@ -257,14 +298,16 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
             FilenameFilter imageFilter = new ImageFilter();
             if (directory.isDirectory()) {
                 File[] images = directory.listFiles(imageFilter);
-                for (File image : images) {
-                    imagesSet.add(image.getName());
-                    imagesByName.put(image.getName(), image.toPath());
+                if (images != null) {
+                    for (File image : images) {
+                        imagesSet.add(image.getName());
+                        imagesByName.put(image.getName(), image.toPath());
+                    }
                 }
             }
             if (imagesByName.size() == 0) {
-                JOptionPane.showMessageDialog(JLabelingSystem.this, MESSAGE_NO_IMAGES_IN_DIR,
-                        INFORMATION, JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(JLabelingSystem.this, provider.get("no_images_in_dir"),
+                        provider.get(INFORMATION), JOptionPane.INFORMATION_MESSAGE);
                 return;
             }
 
@@ -280,13 +323,19 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
             if (imagesByName.size() > 0) {
                 imagesInSelectedDirectory.setSelectedIndex(0);
 
-                nextImageBtn.setEnabled(true);
-                previousImageBtn.setEnabled(true);
-                addBoundingBox.setEnabled(true);
+                nextImage.setEnabled(true);
+                previousImage.setEnabled(true);
+                addBoundingBoxBtn.setEnabled(true);
+                retrainNetwork.setEnabled(true);
+                zoomIn.setEnabled(true);
+                zoomOut.setEnabled(true);
             } else {
-                nextImageBtn.setEnabled(false);
-                previousImageBtn.setEnabled(false);
-                addBoundingBox.setEnabled(false);
+                nextImage.setEnabled(false);
+                previousImage.setEnabled(false);
+                addBoundingBoxBtn.setEnabled(false);
+                retrainNetwork.setEnabled(false);
+                zoomIn.setEnabled(false);
+                zoomOut.setEnabled(false);
 
             }
             imagesInSelectedDirectory.revalidate();
@@ -297,19 +346,18 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
     private void clearAll() {
         classifiedImages.clear();
         imagesByName.clear();
-        ((DefaultListModel<BoundingBox>) boundingBoxes.getModel()).removeAllElements();
+        ((DefaultListModel<BoxPredictionViewModel>) boundingBoxes.getModel()).removeAllElements();
         ((DefaultListModel<String>) imagesInSelectedDirectory.getModel()).removeAllElements();
     }
 
 
-    private AbstractAction loadDataset = new AbstractAction("Load dataset") {
+    private AbstractAction loadDataset = new AbstractAction(provider.get("load_dataset")) {
         @Override
         public void actionPerformed(ActionEvent e) {
 
             JFileChooser fc = new JFileChooser();
-            fc.setDialogTitle("Open JVC file");
-            FileNameExtensionFilter filter = new FileNameExtensionFilter("Image bounding box description" +
-                    " file (JVC)", "jvc");
+            fc.setDialogTitle(provider.get("open_jvc_file"));
+            FileNameExtensionFilter filter = new FileNameExtensionFilter(provider.get("bb_description_file"), "jvc");
             fc.setAcceptAllFileFilterUsed(false);
             fc.setFileFilter(filter);
 
@@ -321,9 +369,9 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
             File fileName = fc.getSelectedFile();
             Path filePath = fileName.toPath();
             if (!Files.isReadable(filePath) || !fileName.toString().endsWith(".jvc")) {
-                JOptionPane.showMessageDialog(JLabelingSystem.this, "The file : "
+                JOptionPane.showMessageDialog(JLabelingSystem.this, provider.get("the_file")
                         + fileName.getAbsolutePath()
-                        + " can not be loaded.", "Error", JOptionPane.ERROR_MESSAGE);
+                        + provider.get("can_not_be_loaded"), provider.get(ERROR), JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
@@ -340,11 +388,8 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
                         if (loadedClassifiedImages.containsKey(path) &&
                                 !model.toString().equals(loadedClassifiedImages.get(path).toString())) {
                             int answer = JOptionPane.showConfirmDialog(JLabelingSystem.this,
-
-                                    "The hand-labeled image " + path.toFile().getName() +
-                                            " differs from labeling in the dataset.\n " +
-                                            "Do you want to overwrite the current labels?"
-                                    , WARNING, JOptionPane.YES_NO_OPTION);
+                                    provider.get("load_ds_image") + path.toFile().getName() + provider.get("load_ds_warning")
+                                    , provider.get(WARNING), JOptionPane.YES_NO_OPTION);
                             modified = true;
 
                             if (answer == JOptionPane.YES_OPTION) {
@@ -364,8 +409,7 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
 
                 File imageFile = new File(imagesByName.get(imagesInSelectedDirectory.getSelectedValue()).toString());
                 LabeledImageModel imageModel = classifiedImages.get(imageFile.toPath());
-                ((BoundingBoxPanel) boundingBoxPanel).setBoxes(imageModel.getBoundingBoxes());
-                ((BoundingBoxPanel) boundingBoxPanel).setClassifications(imageModel.getClassifications());
+                ((BoundingBoxPanel) boundingBoxPanel).setViewModels(imageModel.getViewModels());
 
 
                 boundingBoxes.revalidate();
@@ -376,19 +420,19 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
 
 
             } catch (IOException | FileFormatException e1) {
-                JOptionPane.showMessageDialog(JLabelingSystem.this, MESSAGE_ERROR_READING
+                JOptionPane.showMessageDialog(JLabelingSystem.this, provider.get("error_reading")
                         + fileName.getAbsolutePath()
-                        + ".", "Error", JOptionPane.ERROR_MESSAGE);
+                        + ".", provider.get(ERROR), JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
-            JOptionPane.showMessageDialog(JLabelingSystem.this, MESSAGE_LABELS_LOADED,
-                    INFORMATION, JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(JLabelingSystem.this, provider.get("labels_loaded"),
+                    provider.get(INFORMATION), JOptionPane.INFORMATION_MESSAGE);
         }
     };
 
 
-    private AbstractAction saveDataset = new AbstractAction("Save dataset") {
+    private AbstractAction saveDataset = new AbstractAction(provider.get("save_dataset")) {
         @Override
         public void actionPerformed(ActionEvent e) {
             saveDataset();
@@ -399,8 +443,8 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
     private void saveDataset() {
 
         if (imagesInSelectedDirectory.getModel().getSize() != classifiedImages.size()) {
-            JOptionPane.showMessageDialog(JLabelingSystem.this, MESSAGE_SAVE_INFORMATION,
-                    INFORMATION, JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(JLabelingSystem.this, provider.get("save_information"),
+                    provider.get(INFORMATION), JOptionPane.INFORMATION_MESSAGE);
         }
 
         StringBuilder sb = new StringBuilder();
@@ -412,8 +456,8 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
         JFileChooser saveDataset = new JFileChooser();
 
         if (saveDataset.showSaveDialog(JLabelingSystem.this) != JFileChooser.APPROVE_OPTION) {
-            JOptionPane.showMessageDialog(JLabelingSystem.this, MESSAGE_NOTHING_WAS_SAVED,
-                    INFORMATION,
+            JOptionPane.showMessageDialog(JLabelingSystem.this, provider.get("nothing_was_saved"),
+                    provider.get(INFORMATION),
                     JOptionPane.INFORMATION_MESSAGE);
             return;
         }
@@ -425,8 +469,8 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
         String pathString = path.toString();
         if (!file.getName().contains(".")) {
             JOptionPane.showMessageDialog(JLabelingSystem.this,
-                    MESSAGE_SAVE_IN_JVC_FORMAT,
-                    INFORMATION, JOptionPane.INFORMATION_MESSAGE);
+                    provider.get("save_in_jvc"),
+                    provider.get(INFORMATION), JOptionPane.INFORMATION_MESSAGE);
             path = Paths.get(pathString + ".jvc");
         } else {
             path = Paths.get(pathString.substring(0, pathString.indexOf(".")), ".jvc");
@@ -435,8 +479,8 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
 
         if (path.toFile().isFile() && path.toFile().exists()) {
             int answer = JOptionPane.showConfirmDialog(JLabelingSystem.this,
-                    MESSAGE_FILE_ALREADY_EXIST,
-                    WARNING, JOptionPane.YES_NO_OPTION,
+                    provider.get("file_already_exist"),
+                    provider.get(WARNING), JOptionPane.YES_NO_OPTION,
                     JOptionPane.QUESTION_MESSAGE);
             if (answer == JOptionPane.NO_OPTION || answer == JOptionPane.CLOSED_OPTION) {
                 return;
@@ -447,18 +491,18 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
             bw.write(sb.toString());
         } catch (IOException e1) {
             JOptionPane.showMessageDialog(JLabelingSystem.this,
-                    MESSAGE_ERROR_READING, INFORMATION,
+                    provider.get("error_reading"), provider.get(INFORMATION),
                     JOptionPane.INFORMATION_MESSAGE);
             return;
         }
 
         JOptionPane.showMessageDialog(JLabelingSystem.this,
-                MESSAGE_SAVED, INFORMATION,
+                provider.get("dataset_saved"), provider.get(INFORMATION),
                 JOptionPane.INFORMATION_MESSAGE);
     }
 
 
-    private AbstractAction previousImage = new AbstractAction("Previous image") {
+    private AbstractAction previousImage = new AbstractAction(provider.get("previous_image")) {
         @Override
         public void actionPerformed(ActionEvent e) {
             int currentIndex = imagesInSelectedDirectory.getSelectedIndex();
@@ -471,8 +515,21 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
         }
     };
 
+    private AbstractAction retrainNetwork = new AbstractAction(provider.get("retrain")) {
+        @Override
+        public void actionPerformed(ActionEvent actionEvent) {
 
-    private AbstractAction nextImage = new AbstractAction("Next image") {
+            try {
+                net.retrain(classifiedImages.values());
+            } catch (RetrainNetworkException e) {
+                JOptionPane.showMessageDialog(JLabelingSystem.this, e.getMessage(),
+                        provider.get(INFORMATION), JOptionPane.INFORMATION_MESSAGE);
+            }
+        }
+    };
+
+
+    private AbstractAction nextImage = new AbstractAction(provider.get("next_image")) {
         @Override
         public void actionPerformed(ActionEvent e) {
             int currentIndex = imagesInSelectedDirectory.getSelectedIndex();
@@ -487,7 +544,7 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
     };
 
 
-    private AbstractAction addBoundingBoxAction = new AbstractAction("Dodaj novi okvir") {
+    private AbstractAction addBoundingBoxAction = new AbstractAction(provider.get("add_bb")) {
         @Override
         public void actionPerformed(ActionEvent e) {
 
@@ -502,8 +559,7 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
             if (selectedIndex != -1) {
                 Path selectedImagePath = imagesByName.get(imagesInSelectedDirectory.getSelectedValue());
                 BoundingBoxPanel panel = (BoundingBoxPanel) boundingBoxPanel;
-                panel.setBoxes(classifiedImages.get(selectedImagePath).getBoundingBoxes());
-                panel.setClassifications(classifiedImages.get(selectedImagePath).getClassifications());
+                panel.setViewModels(classifiedImages.get(selectedImagePath).getViewModels());
                 panel.setSelectedBox(selectedIndex);
                 boundingBoxes.revalidate();
                 boundingBoxes.repaint();
@@ -531,11 +587,11 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
                     if (selectedIndex != -1) {
 
                         Path selectedImagePath = imagesByName.get(imagesInSelectedDirectory.getSelectedValue());
+                        classifiedImages.get(selectedImagePath).getViewModels().remove(boundingBoxes.getSelectedValue());
                         ((DefaultListModel) boundingBoxes.getModel()).remove(selectedIndex);
-
-                        classifiedImages.get(selectedImagePath).getBoundingBoxes().remove(selectedIndex);
-                        classifiedImages.get(selectedImagePath).getClassifications().remove(selectedIndex);
                         ((BoundingBoxPanel) boundingBoxPanel).setSelectedBox(-1);
+                        ((BoundingBoxPanel) boundingBoxPanel).clearMovedOverArea();
+
                         int size = boundingBoxes.getModel().getSize();
                         if (size != 0) {
                             if (selectedIndex < boundingBoxes.getModel().getSize()) {
@@ -555,18 +611,10 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
     }
 
     private void editBoundingBox() {
-        BoundingBox clicked = boundingBoxes.getSelectedValue();
-        File imageFile = new File(imagesByName.get(imagesInSelectedDirectory
-                .getSelectedValue()).toString());
-        int index = boundingBoxes.getSelectedIndex();
-
-        LabeledImageModel imageModel = classifiedImages.get(imageFile.toPath());
-        BufferedImage image = imageModel.getImage();
-        GeometricalObjectEditor editor = new BoundingBoxEditPanel(image.getWidth(), image.getHeight(),
-                clicked, imageModel.getClassifications(), index);
-
-        showEditDialog(editor);
+        BoxPredictionViewModel clicked = boundingBoxes.getSelectedValue();
+        showEditor(clicked);
     }
+
 
     private void addListenerToList() {
 
@@ -574,10 +622,15 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
 
         imagesInSelectedDirectory.addListSelectionListener(e -> {
             try {
-                List<BoundingBox> boxes;
+
+                Set<BoxPredictionViewModel> viewModels = new TreeSet<>();
                 List<BufferedImage> images;
-                List<Integer> classifications;
+                List<BoundingBox> boxes;
                 BufferedImage image;
+
+                if (imagesByName.size() == 0) {
+                    return;
+                }
 
                 File imageFile = new File(imagesByName.get(imagesInSelectedDirectory
                         .getSelectedValue()).toString());
@@ -588,39 +641,105 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
                 }
 
                 if (!this.classifiedImages.containsKey(imageFile.toPath())) {
+
                     LabeledImageModel imageModel = new LabeledImageModel(imageFile.toPath());
                     image = ImageIO.read(imageFile);
-                    boxes = ImageUtils.getBoundingBoxesAroundImage(image);
 
-                    images = ImageUtils.getImagesAroundBoundingBoxes(image, boxes);
-                    Classifier classifier = Classifier.getInstance();
-                    classifications = new ArrayList<>();
-                    for (BufferedImage currentImage : images) {
-                        classifications.add(classifier.classify(net, currentImage));
+                    boxes = ImageManager.getBoundingBoxesAroundImage(image, new ConnectedComponent());
+                    images = ImageManager.getImagesAroundBoundingBoxes(image, boxes);
+
+                    int i = 0;
+                    OptionalDouble average = boxes.stream().mapToInt(BoundingBox::getWidth).average();
+                    double averageWidth = 0.0;
+                    if (average.isPresent()) {
+                        averageWidth = average.getAsDouble();
                     }
 
-                    imageModel.setBoundingBoxes(boxes);
-                    imageModel.setClassifications(classifications);
+
+//                    ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors(),
+//                            runnable -> {
+//                                Thread t = Executors.defaultThreadFactory().newThread(runnable);
+//                                t.setDaemon(true);
+//                                return t;
+//                            });
+//
+//
+//                    List<Callable<Pair<List<BoundingBox>, List<Integer>>>> tasks = new ArrayList<>();
+
+                    for (BufferedImage currentImage : images) {
+                        //classifications.add(net.predictOutputProbabilities(currentImage));
+//                        BoundingBox box = boxes.get(i++);
+//                        double averageWidthFinal = averageWidth;
+//
+//                        Callable<Pair<List<BoundingBox>, List<Integer>>> imageTask = () -> {
+//                            List<Pair<BoundingBox, Integer>> pairs = ImageManager.postProcessImage(net, currentImage,
+//                                    box, averageWidthFinal);
+//
+//                            List<BoundingBox> results = new ArrayList<>();
+//                            List<Integer> predictions = new ArrayList<>();
+//
+//                            if (pairs == null) {
+//                                results.add(box);
+//                                predictions.add(net.predictOutput(currentImage));
+//
+//                            } else {
+//                                for (Pair<BoundingBox, Integer> pair : pairs) {
+//                                    results.add(pair.getKey());
+//                                    predictions.add(pair.getValue());
+//                                }
+//                            }
+//                            return Pair.create(results, predictions);
+//                        };
+//
+//                        tasks.add(imageTask);
+
+
+                        List<Pair<BoundingBox, Integer>> pairs = ImageManager.postProcessImage(net, currentImage,
+                                boxes.get(i), averageWidth);
+                        if (pairs == null) {
+                            int output = net.predictOutput(currentImage);
+                            boxes.get(i).setGroupColor(RandomColorChooser.getColorForPrediction(output));
+                            viewModels.add(new BoxPredictionViewModel(boxes.get(i), output));
+                        } else {
+                            for (Pair<BoundingBox, Integer> pair : pairs) {
+                                pair.getKey().setGroupColor(RandomColorChooser.getColorForPrediction(pair.getValue()));
+                                viewModels.add(new BoxPredictionViewModel(pair.getKey(), pair.getValue()));
+                            }
+                        }
+                        i++;
+                    }
+
+//                    List<Future<Pair<List<BoundingBox>, List<Integer>>>> futures = executorService.invokeAll(tasks);
+//
+//                    for (Future<Pair<List<BoundingBox>, List<Integer>>> future : futures) {
+//                        Pair<List<BoundingBox>, List<Integer>> result = future.get();
+//                        finalBoxes.addAll(result.getFirst());
+//                        classifications.addAll(result.getSecond());
+//                    }
+
+
+                    imageModel.setViewModels(viewModels);
                     imageModel.setImage(image);
                     this.classifiedImages.put(imageFile.toPath(), imageModel);
                 } else {
                     LabeledImageModel imageModel = this.classifiedImages.get(imageFile.toPath());
                     image = imageModel.getImage();
-                    boxes = imageModel.getBoundingBoxes();
-                    classifications = imageModel.getClassifications();
+                    viewModels = imageModel.getViewModels();
                 }
 
 
-                DefaultListModel<BoundingBox> boundingBoxes = new DefaultListModel<>();
-                for (BoundingBox box : boxes) {
-                    boundingBoxes.addElement(box);
+                DefaultListModel<BoxPredictionViewModel> boundingBoxes = new DefaultListModel<>();
+
+
+                for (BoxPredictionViewModel model : viewModels) {
+                    boundingBoxes.addElement(model);
                 }
+
                 this.boundingBoxes.setModel(boundingBoxes);
 
 
                 ((ImagePanel) imagePanel).setImage(image);
-                ((BoundingBoxPanel) boundingBoxPanel).setBoxes(boxes);
-                ((BoundingBoxPanel) boundingBoxPanel).setClassifications(classifications);
+                ((BoundingBoxPanel) boundingBoxPanel).setViewModels(viewModels);
                 ((BoundingBoxPanel) boundingBoxPanel).setSelectedBox(-1);
                 imagePanel.revalidate();
                 imagePanel.repaint();
@@ -632,6 +751,7 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
 
             } catch (Exception ex) {
                 //
+                ex.printStackTrace();
             }
 
         });
@@ -639,18 +759,17 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
 
 
     @Override
-    public void modelChanged(BoundingBox newBox) {
+    public void modelChanged(BoxPredictionViewModel model) {
 
         JPanel classificationPanel = new ClassificationPanel();
         int number;
         int answer = JOptionPane.showConfirmDialog(JLabelingSystem.this, classificationPanel,
-                "Classification number",
+                provider.get("classification_number"),
                 JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
 
         if (answer == JOptionPane.CANCEL_OPTION || answer == JOptionPane.CLOSED_OPTION) {
             BoundingBoxPanel panel = ((BoundingBoxPanel) boundingBoxPanel);
-            int size = panel.getBoxes().size();
-            panel.getBoxes().remove(size - 1);
+            panel.getViewModels().remove(model);
             panel.revalidate();
             panel.repaint();
             return;
@@ -658,32 +777,51 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
             number = ((ClassificationPanel) classificationPanel).getModelClassificationNumber();
         }
 
-        List<BoundingBox> elements = Collections.list(((DefaultListModel<BoundingBox>)
+        model.setPrediction(number);
+        model.getBoundingBox().setGroupColor(RandomColorChooser.getColorForPrediction(number));
+
+        List<BoxPredictionViewModel> elements = Collections.list(((DefaultListModel<BoxPredictionViewModel>)
                 boundingBoxes.getModel()).elements());
-        elements.add(newBox);
-        Collections.sort(elements);
-        DefaultListModel<BoundingBox> model = new DefaultListModel<>();
+
+
+        List<BoxPredictionViewModel> boxesInsideNewBox = new ArrayList<>();
+        for (BoxPredictionViewModel element : elements) {
+            if (element.getBoundingBox().isInsideBox(model.getBoundingBox())) {
+                boxesInsideNewBox.add(element);
+            }
+        }
+
+        elements.removeAll(boxesInsideNewBox);
+        elements.add(model);
+
+
+//        Path selectedImagePath = imagesByName.get(imagesInSelectedDirectory.getSelectedValue());
+//        LabeledImageModel labeledImageModel = classifiedImages.get(selectedImagePath);
+
+
+//        elements.sort(Comparator.comparingInt(x -> labeledImageModel.getClassificationForBoundingBox((BoundingBox) x))
+//                .thenComparing(x -> ((BoundingBox) x).getUpLeft()));
+
+//        Collections.sort(elements);
+        DefaultListModel<BoxPredictionViewModel> newModel = new DefaultListModel<>();
         int index = -1;
 
         int i = 0;
-        for (BoundingBox box : elements) {
-            model.addElement(box);
-            if (box == newBox) {
+        Set<BoxPredictionViewModel> sortedViewModels = new TreeSet<>(elements);
+        for (BoxPredictionViewModel viewModel : sortedViewModels) {
+            newModel.addElement(viewModel);
+            if (viewModel.equals(model)) {
                 index = i;
             }
             i++;
         }
-
-        int indexAfterSort = elements.indexOf(newBox);
-
-        boundingBoxes.setModel(model);
+        boundingBoxes.setModel(newModel);
 
         File imageFile = new File(imagesByName.get(imagesInSelectedDirectory
                 .getSelectedValue()).toString());
 
         LabeledImageModel imageModel = this.classifiedImages.get(imageFile.toPath());
-        imageModel.setBoundingBoxes(elements);
-        imageModel.getClassifications().add(indexAfterSort, number);
+        imageModel.setViewModels(sortedViewModels);
 
         boundingBoxes.setSelectedIndex(index);
         boundingBoxes.revalidate();
@@ -692,44 +830,76 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
     }
 
     @Override
-    public void selectedForEdit(int index) {
-        BoundingBox clicked = boundingBoxes.getModel().getElementAt(index);
-        boundingBoxes.setSelectedIndex(index);
+    public void selectedForEdit(BoxPredictionViewModel viewModel) {
+        showEditor(viewModel);
+    }
 
+    private void showEditor(BoxPredictionViewModel viewModel) {
         File imageFile = new File(imagesByName.get(imagesInSelectedDirectory
                 .getSelectedValue()).toString());
 
-
         LabeledImageModel imageModel = classifiedImages.get(imageFile.toPath());
         BufferedImage image = imageModel.getImage();
-        GeometricalObjectEditor editor = new BoundingBoxEditPanel(image.getWidth(), image.getHeight(), clicked,
-                imageModel.getClassifications(), index);
+        GeometricalObjectEditor editor = new BoundingBoxEditPanel(boundingBoxPanel, image.getWidth(), image.getHeight(), viewModel);
 
         showEditDialog(editor);
     }
 
     @Override
-    public void selected(int index) {
-        if (index == -1) {
+    public void selected(BoxPredictionViewModel viewModel) {
+        if (viewModel == null) {
             boundingBoxes.clearSelection();
             ((BoundingBoxPanel) boundingBoxPanel).setSelectedBox(-1);
             return;
         }
-        boundingBoxes.setSelectedIndex(index);
+        boundingBoxes.setSelectedValue(viewModel, true);
         boundingBoxes.requestFocus();
+    }
+
+    @Override
+    public void movedOver(BoxPredictionViewModel model) {
+        BoundingBoxPanel panel = (BoundingBoxPanel) boundingBoxPanel;
+        if (model != null) {
+            panel.setMovedOver(model);
+        } else {
+            panel.clearMovedOverArea();
+        }
+        panel.revalidate();
+        panel.repaint();
     }
 
     private void showEditDialog(GeometricalObjectEditor editor) {
         if (JOptionPane.showConfirmDialog(JLabelingSystem.this, editor,
-                "Edit", JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
+                provider.get("edit"), JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
             try {
+
                 editor.acceptEditing();
+                List<BoxPredictionViewModel> viewModels = Collections.list(((DefaultListModel<BoxPredictionViewModel>)
+                        boundingBoxes.getModel()).elements());
+                DefaultListModel<BoxPredictionViewModel> sortedModel = new DefaultListModel<>();
+                Set<BoxPredictionViewModel> sortedElements = new TreeSet<>(viewModels);
+                for (BoxPredictionViewModel model : sortedElements) {
+                    sortedModel.addElement(model);
+                }
+
+                boundingBoxes.setModel(sortedModel);
+                Path selectedImagePath = imagesByName.get(imagesInSelectedDirectory.getSelectedValue());
+                classifiedImages.get(selectedImagePath).setViewModels(sortedElements);
+
+                boundingBoxes.setSelectedIndex(-1);
+
+                boundingBoxes.revalidate();
+                boundingBoxes.repaint();
+
                 boundingBoxPanel.revalidate();
                 boundingBoxPanel.repaint();
+
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(JLabelingSystem.this,
-                        "Invalid arguments");
+                        provider.get("invalid_arguments"));
             }
+        } else {
+            editor.cancelEditing();
         }
     }
 
@@ -746,7 +916,7 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
     private void exitAction() {
         if (modified) {
             int answer = JOptionPane.showConfirmDialog(JLabelingSystem.this,
-                    MESSAGE_SAVE_BEFORE_EXIT, "Save",
+                    provider.get("save_before_exit"), provider.get("save"),
                     JOptionPane.YES_NO_OPTION);
             if (answer == JOptionPane.YES_OPTION) {
                 saveDataset();

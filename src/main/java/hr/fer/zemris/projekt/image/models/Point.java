@@ -1,12 +1,19 @@
 package hr.fer.zemris.projekt.image.models;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.util.Objects;
 
-public class Point {
+public class Point implements Comparable<Point> {
     private int x;
     private int y;
 
-    public Point(int x, int y) {
+
+    public static Point create(int x, int y) {
+        return new Point(x, y);
+    }
+
+    private Point(int x, int y) {
         this.x = x;
         this.y = y;
     }
@@ -46,7 +53,22 @@ public class Point {
 
     @Override
     public int hashCode() {
-
         return Objects.hash(x, y);
+    }
+
+    @Override
+    public int compareTo(@NotNull Point o) {
+        int x1 = this.x;
+        int x2 = o.getX();
+        int y1 = this.y;
+        int y2 = o.getY();
+
+        int xCompare = Integer.compare(x1, x2);
+        if (xCompare != 0) {
+            return xCompare;
+        } else {
+            return Integer.compare(y1, y2);
+        }
+
     }
 }

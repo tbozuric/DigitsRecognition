@@ -1,7 +1,7 @@
 package hr.fer.zemris.projekt.image.grayscale;
 
 import hr.fer.zemris.projekt.image.IImageFilter;
-import hr.fer.zemris.projekt.image.utils.ImageUtils;
+import hr.fer.zemris.projekt.image.managers.ImageManager;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -27,7 +27,7 @@ public abstract class AbstractGrayscaleFilter implements IImageFilter {
                 int blue = c.getBlue();
 
                 int gray = getGrayComponent(red, green, blue);
-                grayImage.setRGB(x, y, ImageUtils.colorToRGB(255, gray, gray, gray));
+                grayImage.setRGB(x, y, ImageManager.colorToRGB(255, gray, gray, gray));
             }
         }
 
