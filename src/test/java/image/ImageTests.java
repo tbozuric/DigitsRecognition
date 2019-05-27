@@ -1,7 +1,5 @@
 package image;
 
-import hr.fer.zemris.projekt.image.BinaryImageAsArrayDelete;
-import hr.fer.zemris.projekt.image.BufferedBinaryImageDelete;
 import hr.fer.zemris.projekt.image.IImageFilter;
 import hr.fer.zemris.projekt.image.ImageTransformer;
 import hr.fer.zemris.projekt.image.dilation.BinaryDilationFilter;

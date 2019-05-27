@@ -7,6 +7,7 @@ import hr.fer.zemris.projekt.math.Entropy;
 import hr.fer.zemris.projekt.neural.INetwork;
 import org.apache.commons.lang3.tuple.Triple;
 import org.apache.commons.math3.util.Pair;
+import org.jetbrains.annotations.NotNull;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -16,9 +17,6 @@ import java.util.stream.Collectors;
 
 public class SlidingWindowAnalyzer {
 
-    private static final int WINDOW_STRIDE = 16;
-
-
     private SlidingWindowAnalyzer() {
 
     }
@@ -26,7 +24,7 @@ public class SlidingWindowAnalyzer {
     public static List<Pair<BoundingBox, Integer>> analyze(INetwork net, BufferedImage image, BoundingBox box) {
         List<Triple<BoundingBox, Integer, Double>> result = new ArrayList<>();
         Entropy entropy = Entropy.getInstance();
-        //13,17
+
         int[] slidingWindowSizes = new int[]{13, 15, 17};
 
 
@@ -122,6 +120,11 @@ public class SlidingWindowAnalyzer {
             results.add(result);
         }
 
+        return findTotalMinimumPerplexity(results);
+    }
+
+    @NotNull
+    private static List<Pair<BoundingBox, Integer>> findTotalMinimumPerplexity(List<List<Triple<BoundingBox, Integer, Double>>> results) {
         double minSum = Double.MAX_VALUE;
         int index = -1;
         int i = 0;

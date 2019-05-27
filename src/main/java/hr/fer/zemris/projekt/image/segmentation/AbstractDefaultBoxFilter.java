@@ -4,6 +4,7 @@ import hr.fer.zemris.projekt.filters.Filter;
 import hr.fer.zemris.projekt.image.models.BoundingBox;
 import hr.fer.zemris.projekt.image.models.Point;
 import org.apache.commons.math3.util.Pair;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
@@ -13,17 +14,108 @@ public abstract class AbstractDefaultBoxFilter implements BoundingBoxFinder {
     private static final int MAXIMUM_DISTANCE_VERTICALLY = 4;
     private static final double MINIMUM_WIDTH_RATIO_BETWEEN_BOXES = 1.4;
     private static final double MAXIMUM_AVERAGE_HEIGHT_FACTOR = 2.0;
-    private static final double MAXIMUM_HEIGHT_RATIO = 0.62;//0.62
+    private static final double MAXIMUM_HEIGHT_RATIO = 0.62;
     private static final int MINIMUM_DISTANCE_BETWEEN_Y_AXES_OF_BOXES = 6;
 
-    //private static final int MINIMUM_BOX_HEIGHT_WIDTH = 5;
 
     @Override
     public List<BoundingBox> filter(List<BoundingBox> boxes, List<Filter<BoundingBox>> filters) {
 
+        Set<BoundingBox> results = mergeBoxes(boxes);
 
-        int size = boxes.size();
+        //final filters received through the parameter
+        List<BoundingBox> finalResults = new ArrayList<>();
+        for (BoundingBox box : results) {
+            boolean isOk = true;
+            for (Filter<BoundingBox> filter : filters) {
+                if (!filter.getFilter().test(box)) {
+                    isOk = false;
+                    break;
+                }
+            }
+            if (isOk) {
+                finalResults.add(box);
+            }
+        }
 
+
+        return finalResults;
+    }
+
+    @NotNull
+    private Set<BoundingBox> mergeBoxes(List<BoundingBox> boxes) {
+
+        Map<BoundingBox, Set<BoundingBox>> itemsForMerging = findCandidates(boxes, boxes.size());
+        Map<BoundingBox, Set<BoundingBox>> chainFilteredBoxes = findCyclicChains(itemsForMerging);
+
+        return updateBoxes(boxes, chainFilteredBoxes);
+    }
+
+    @NotNull
+    private Set<BoundingBox> updateBoxes(List<BoundingBox> boxes, Map<BoundingBox, Set<BoundingBox>> chainFilteredBoxes) {
+        Set<BoundingBox> boxesForRemoving = new HashSet<>();
+        Set<BoundingBox> newBoxes = new HashSet<>();
+        for (Map.Entry<BoundingBox, Set<BoundingBox>> entry : chainFilteredBoxes.entrySet()) {
+            BoundingBox b = entry.getKey();
+            Set<BoundingBox> boxesForMerging = entry.getValue();
+
+            BoundingBox finalBox = b;
+            for (BoundingBox box : boxesForMerging) {
+                finalBox = BoundingBox.getOuterBox(finalBox, box);
+            }
+
+            boxesForRemoving.add(b);
+            boxesForRemoving.addAll(boxesForMerging);
+
+            newBoxes.add(finalBox);
+        }
+
+        Set<BoundingBox> results = new HashSet<>(boxes);
+        results.removeAll(boxesForRemoving);
+        results.addAll(newBoxes);
+        return results;
+    }
+
+    @NotNull
+    private Map<BoundingBox, Set<BoundingBox>> findCyclicChains(Map<BoundingBox, Set<BoundingBox>> itemsForMerging) {
+        Map<BoundingBox, Set<BoundingBox>> chainFilteredBoxes = new HashMap<>();
+        Set<BoundingBox> visitedBoxes = new HashSet<>();
+
+        //this part resolving the problem with chained boxes, for example if b1 needs to be merged with b2, b3,
+        // b4 and b2 needs to be merged with b6 then the final result will be b1 -> b2,b3,b4,b6
+        for (Map.Entry<BoundingBox, Set<BoundingBox>> entry : itemsForMerging.entrySet()) {
+            if (visitedBoxes.contains(entry.getKey())) {
+                continue;
+            }
+            Set<BoundingBox> boxesForProcessing = entry.getValue();
+            Set<BoundingBox> finalBoxesForMerging = new HashSet<>();
+
+            while (boxesForProcessing.size() != 0) {
+                Set<BoundingBox> child = new HashSet<>();
+                for (BoundingBox b : boxesForProcessing) {
+                    finalBoxesForMerging.add(b);
+                    if (itemsForMerging.get(b) != null) {
+                        child.addAll(itemsForMerging.get(b));
+                    }
+                }
+                boxesForProcessing = new HashSet<>();
+                for (BoundingBox children : child) {
+                    if (!finalBoxesForMerging.contains(children)) {
+                        boxesForProcessing.add(children);
+                    }
+                }
+            }
+
+            visitedBoxes.add(entry.getKey());
+            visitedBoxes.addAll(finalBoxesForMerging);
+
+            chainFilteredBoxes.put(entry.getKey(), finalBoxesForMerging);
+        }
+        return chainFilteredBoxes;
+    }
+
+    @NotNull
+    private Map<BoundingBox, Set<BoundingBox>> findCandidates(List<BoundingBox> boxes, int size) {
         int totalHeight = 0;
 
         for (BoundingBox box : boxes) {
@@ -77,7 +169,6 @@ public abstract class AbstractDefaultBoxFilter implements BoundingBoxFinder {
                         int yDownSecond;
 
 
-
                         if (p1.getY() < p2.getY()) {
                             yDownFirst = p1.getY() + b1.getHeight();
                             yDownSecond = p2.getY();
@@ -88,18 +179,10 @@ public abstract class AbstractDefaultBoxFilter implements BoundingBoxFinder {
 
                         if ((1.0 / heightRatio) >= MAXIMUM_HEIGHT_RATIO &&
                                 Math.abs(yDownFirst - yDownSecond) > MAXIMUM_DISTANCE_VERTICALLY
-                                && Math.abs(p1.getY() - p2.getY()) <= MINIMUM_DISTANCE_BETWEEN_Y_AXES_OF_BOXES)   {
+                                && Math.abs(p1.getY() - p2.getY()) <= MINIMUM_DISTANCE_BETWEEN_Y_AXES_OF_BOXES) {
                             continue;
                         }
 
-
-//                        if(heightOfFirstBox <= MINIMUM_BOX_HEIGHT_WIDTH && widthOfFirstBox <=MINIMUM_BOX_HEIGHT_WIDTH){
-//                            continue;
-//                        }
-//
-//                        if(heightOfSecondBox <= MINIMUM_BOX_HEIGHT_WIDTH && widthOfSecondBox <=MINIMUM_BOX_HEIGHT_WIDTH){
-//                            continue;
-//                        }
 
                         //if the wider box is 60% wider than the other then that digits, it may need to be separated
                         if (widthRatio <= MINIMUM_WIDTH_RATIO_BETWEEN_BOXES) {
@@ -136,80 +219,7 @@ public abstract class AbstractDefaultBoxFilter implements BoundingBoxFinder {
                 }
             }
         }
-
-        Map<BoundingBox, Set<BoundingBox>> chainFilteredBoxes = new HashMap<>();
-        Set<BoundingBox> visitedBoxes = new HashSet<>();
-
-        //this part resolving the problem with chained boxes, for example if b1 needs to be merged with b2, b3,
-        // b4 and b2 needs to be merged with b6 then the final result will be b1 -> b2,b3,b4,b6
-        for (Map.Entry<BoundingBox, Set<BoundingBox>> entry : itemsForMerging.entrySet()) {
-            if (visitedBoxes.contains(entry.getKey())) {
-                continue;
-            }
-            Set<BoundingBox> boxesForProcessing = entry.getValue();
-            Set<BoundingBox> finalBoxesForMerging = new HashSet<>();
-
-            while (boxesForProcessing.size() != 0) {
-                Set<BoundingBox> child = new HashSet<>();
-                for (BoundingBox b : boxesForProcessing) {
-                    finalBoxesForMerging.add(b);
-                    if (itemsForMerging.get(b) != null) {
-                        child.addAll(itemsForMerging.get(b));
-                    }
-                }
-                boxesForProcessing = new HashSet<>();
-                for (BoundingBox children : child) {
-                    if (!finalBoxesForMerging.contains(children)) {
-                        boxesForProcessing.add(children);
-                    }
-                }
-            }
-
-            visitedBoxes.add(entry.getKey());
-            visitedBoxes.addAll(finalBoxesForMerging);
-
-            chainFilteredBoxes.put(entry.getKey(), finalBoxesForMerging);
-        }
-
-        Set<BoundingBox> boxesForRemoving = new HashSet<>();
-        Set<BoundingBox> newBoxes = new HashSet<>();
-        for (Map.Entry<BoundingBox, Set<BoundingBox>> entry : chainFilteredBoxes.entrySet()) {
-            BoundingBox b = entry.getKey();
-            Set<BoundingBox> boxesForMerging = entry.getValue();
-
-            BoundingBox finalBox = b;
-            for (BoundingBox box : boxesForMerging) {
-                finalBox = BoundingBox.getOuterBox(finalBox, box);
-            }
-
-            boxesForRemoving.add(b);
-            boxesForRemoving.addAll(boxesForMerging);
-
-            newBoxes.add(finalBox);
-        }
-
-        Set<BoundingBox> results = new HashSet<>(boxes);
-        results.removeAll(boxesForRemoving);
-        results.addAll(newBoxes);
-
-
-        //final filters received through the parameter
-        List<BoundingBox> finalResults = new ArrayList<>();
-        for (BoundingBox box : results) {
-            boolean isOk = true;
-            for (Filter<BoundingBox> filter : filters) {
-                if (!filter.getFilter().test(box)) {
-                    isOk = false;
-                    break;
-                }
-            }
-            if (isOk) {
-                finalResults.add(box);
-            }
-        }
-
-
-        return finalResults;
+        return itemsForMerging;
     }
 
     private double getRatio(int firstValue, int secondValue, boolean isBiggerFirstValue) {
