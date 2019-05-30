@@ -322,26 +322,32 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
             imagesInSelectedDirectory.setModel(imagesInDirectoryModel);
             if (imagesByName.size() > 0) {
                 imagesInSelectedDirectory.setSelectedIndex(0);
-
-                nextImage.setEnabled(true);
-                previousImage.setEnabled(true);
-                addBoundingBoxBtn.setEnabled(true);
-                retrainNetwork.setEnabled(true);
-                zoomIn.setEnabled(true);
-                zoomOut.setEnabled(true);
+                enableActions();
             } else {
-                nextImage.setEnabled(false);
-                previousImage.setEnabled(false);
-                addBoundingBoxBtn.setEnabled(false);
-                retrainNetwork.setEnabled(false);
-                zoomIn.setEnabled(false);
-                zoomOut.setEnabled(false);
-
+                disableActions();
             }
             imagesInSelectedDirectory.revalidate();
             imagesInSelectedDirectory.repaint();
         }
     };
+
+    private void disableActions() {
+        nextImage.setEnabled(false);
+        previousImage.setEnabled(false);
+        addBoundingBoxBtn.setEnabled(false);
+        retrainNetwork.setEnabled(false);
+        zoomIn.setEnabled(false);
+        zoomOut.setEnabled(false);
+    }
+
+    private void enableActions() {
+        nextImage.setEnabled(true);
+        previousImage.setEnabled(true);
+        addBoundingBoxBtn.setEnabled(true);
+        retrainNetwork.setEnabled(true);
+        zoomIn.setEnabled(true);
+        zoomOut.setEnabled(true);
+    }
 
     private void clearAll() {
         classifiedImages.clear();
@@ -655,43 +661,7 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
                         averageWidth = average.getAsDouble();
                     }
 
-
-//                    ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors(),
-//                            runnable -> {
-//                                Thread t = Executors.defaultThreadFactory().newThread(runnable);
-//                                t.setDaemon(true);
-//                                return t;
-//                            });
-//
-//
-//                    List<Callable<Pair<List<BoundingBox>, List<Integer>>>> tasks = new ArrayList<>();
-
                     for (BufferedImage currentImage : images) {
-                        //classifications.add(net.predictOutputProbabilities(currentImage));
-//                        BoundingBox box = boxes.get(i++);
-//                        double averageWidthFinal = averageWidth;
-//
-//                        Callable<Pair<List<BoundingBox>, List<Integer>>> imageTask = () -> {
-//                            List<Pair<BoundingBox, Integer>> pairs = ImageManager.postProcessImage(net, currentImage,
-//                                    box, averageWidthFinal);
-//
-//                            List<BoundingBox> results = new ArrayList<>();
-//                            List<Integer> predictions = new ArrayList<>();
-//
-//                            if (pairs == null) {
-//                                results.add(box);
-//                                predictions.add(net.predictOutput(currentImage));
-//
-//                            } else {
-//                                for (Pair<BoundingBox, Integer> pair : pairs) {
-//                                    results.add(pair.getKey());
-//                                    predictions.add(pair.getValue());
-//                                }
-//                            }
-//                            return Pair.create(results, predictions);
-//                        };
-//
-//                        tasks.add(imageTask);
 
 
                         List<Pair<BoundingBox, Integer>> pairs = ImageManager.postProcessImage(net, currentImage,
@@ -708,15 +678,6 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
                         }
                         i++;
                     }
-
-//                    List<Future<Pair<List<BoundingBox>, List<Integer>>>> futures = executorService.invokeAll(tasks);
-//
-//                    for (Future<Pair<List<BoundingBox>, List<Integer>>> future : futures) {
-//                        Pair<List<BoundingBox>, List<Integer>> result = future.get();
-//                        finalBoxes.addAll(result.getFirst());
-//                        classifications.addAll(result.getSecond());
-//                    }
-
 
                     imageModel.setViewModels(viewModels);
                     imageModel.setImage(image);
@@ -795,14 +756,6 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
         elements.add(model);
 
 
-//        Path selectedImagePath = imagesByName.get(imagesInSelectedDirectory.getSelectedValue());
-//        LabeledImageModel labeledImageModel = classifiedImages.get(selectedImagePath);
-
-
-//        elements.sort(Comparator.comparingInt(x -> labeledImageModel.getClassificationForBoundingBox((BoundingBox) x))
-//                .thenComparing(x -> ((BoundingBox) x).getUpLeft()));
-
-//        Collections.sort(elements);
         DefaultListModel<BoxPredictionViewModel> newModel = new DefaultListModel<>();
         int index = -1;
 
