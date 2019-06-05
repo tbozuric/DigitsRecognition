@@ -134,7 +134,6 @@ public class SlidingWindowAnalyzer {
             double squaredSumOfPerplexities = oneResult.stream().mapToDouble(x -> Math.pow(x.getRight(), 2.0)
                     * Math.exp(-expFunctionValue)).sum();
 
-            System.out.println(squaredSumOfPerplexities);
             if (squaredSumOfPerplexities <= minSum) {
                 minSum = squaredSumOfPerplexities;
                 index = i;

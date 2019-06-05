@@ -275,6 +275,9 @@ public class ConvNetClassifier implements INetwork {
                 net.fit(trainIter);
                 trainIter.reset();
             }
+
+            save();
+
         } catch (IOException e) {
             throw new RetrainNetworkException("Some error occurred. Please try again.");
         }
