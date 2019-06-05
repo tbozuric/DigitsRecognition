@@ -1,38 +1,38 @@
 package hr.fer.zemris.projekt.image.managers;
 
 import hr.fer.zemris.projekt.filters.FilterAggregator;
-import hr.fer.zemris.projekt.image.IImageFilter;
-import hr.fer.zemris.projekt.image.ImageTransformer;
-import hr.fer.zemris.projekt.image.binarization.OtsuBinarization;
-import hr.fer.zemris.projekt.image.border.BorderImage;
-import hr.fer.zemris.projekt.image.dilation.BinaryDilationFilter;
-import hr.fer.zemris.projekt.image.grayscale.BT709GrayscaleFilter;
-import hr.fer.zemris.projekt.image.interpolation.NearestNeighborInterpolation;
+import hr.fer.zemris.projekt.image.ImageBuilder;
 import hr.fer.zemris.projekt.image.models.BoundingBox;
 import hr.fer.zemris.projekt.image.models.Point;
 import hr.fer.zemris.projekt.image.postprocessor.AverageWidthPostProcessor;
 import hr.fer.zemris.projekt.image.postprocessor.EntropyConfidenceBasedPostProcessor;
 import hr.fer.zemris.projekt.image.postprocessor.IPostProcessor;
 import hr.fer.zemris.projekt.image.segmentation.BoundingBoxFinder;
+import hr.fer.zemris.projekt.image.segmentation.ConnectedComponent;
 import hr.fer.zemris.projekt.image.segmentation.Filters;
-import hr.fer.zemris.projekt.image.translation.CentreOfMassTranslation;
 import hr.fer.zemris.projekt.neural.INetwork;
 import org.apache.commons.math3.util.Pair;
 
+import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.ColorModel;
 import java.awt.image.WritableRaster;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
 public class ImageManager {
-    private static List<IImageFilter> imageFilters = new ArrayList<>();
+
+    private static ImageBuilder grayImage = new ImageBuilder();
 
     static {
-        imageFilters.add(new BT709GrayscaleFilter());
-        imageFilters.add(new OtsuBinarization());
-        imageFilters.add(new BinaryDilationFilter());
+        grayImage.grayscale();
+        grayImage.binarization();
+        grayImage.dilation();
     }
 
     public static int colorToRGB(int alpha, int red, int green, int blue) {
@@ -64,17 +64,16 @@ public class ImageManager {
 
 
     public static BufferedImage transformImageToBinary(BufferedImage image, int desiredWidth, int desiredHeight) {
-        ImageTransformer transformer = ImageTransformer.getInstance();
-        List<IImageFilter> filters = new ArrayList<>();
 
-        filters.add(new BT709GrayscaleFilter());
-        filters.add(new OtsuBinarization());
-        filters.add(new BorderImage());
-        filters.add(new BinaryDilationFilter());
-        filters.add(new NearestNeighborInterpolation(desiredWidth, desiredHeight));
-        filters.add(new CentreOfMassTranslation());
+        ImageBuilder imageBuilder = new ImageBuilder();
 
-        return transformer.transform(image, filters);
+        return imageBuilder.grayscale()
+                .binarization()
+                .border()
+                .dilation()
+                .interpolation(desiredWidth, desiredHeight)
+                .centreOfMassTranslation().build(image);
+
     }
 
 
@@ -92,8 +91,7 @@ public class ImageManager {
 
 
     public static List<BoundingBox> getBoundingBoxesAroundImage(BufferedImage image, BoundingBoxFinder finder) {
-        ImageTransformer transformer = ImageTransformer.getInstance();
-        BufferedImage gray = transformer.transform(image, imageFilters);
+        BufferedImage gray = grayImage.build(image);
 
         List<BoundingBox> boxes = finder.find(gray);
         FilterAggregator<BoundingBox> aggregator = new FilterAggregator<>();
@@ -154,5 +152,54 @@ public class ImageManager {
             bufferedImages.add(bufferedImage);
         }
         return bufferedImages;
+    }
+
+    public static void saveDigitsFromImages(Path inputDirectory, Path outputDirectory) throws IOException {
+        File dir = new File(inputDirectory.toString());
+        File[] directoryListing = dir.listFiles();
+
+        if (directoryListing != null) {
+            for (File child : directoryListing) {
+                BufferedImage img = ImageIO.read(child);
+                StringBuilder nameOfImage = new StringBuilder(child.getName());
+                nameOfImage = new StringBuilder(nameOfImage.substring(0, nameOfImage.indexOf(".")));
+
+                List<BufferedImage> digitsFromImage = getImagesAroundBoundingBoxes(img,
+                        getBoundingBoxesAroundImage(img, new ConnectedComponent()));
+                int counter = 0;
+                String finalNameOfImage;
+                for (BufferedImage bufferedImage : digitsFromImage) {
+                    finalNameOfImage = nameOfImage + "_" + counter++ + ".png";
+                    Path newImage = Paths.get(outputDirectory.toString(), finalNameOfImage);
+                    ImageIO.write(bufferedImage, "png", new File(newImage.toString()));
+                }
+            }
+        }
+    }
+
+    public static void tranformImagesToBinary(Path inputDirectory, Path outputDirectory) throws IOException {
+        File dir = new File(inputDirectory.toString());
+        File[] directoryListing = dir.listFiles();
+
+        ImageBuilder imageBuilder = new ImageBuilder();
+        imageBuilder.grayscale()
+                .binarization()
+                .border()
+                .dilation()
+                .interpolation()
+                .centreOfMassTranslation();
+
+
+        if (directoryListing != null) {
+            for (File child : directoryListing) {
+                BufferedImage img = ImageIO.read(child);
+                String nameOfImage = child.getName();
+
+                BufferedImage gray = imageBuilder.build(img);
+
+                Path path = Paths.get(outputDirectory.toString(), nameOfImage);
+                ImageIO.write(gray, "png", path.toFile());
+            }
+        }
     }
 }
