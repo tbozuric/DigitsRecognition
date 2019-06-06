@@ -53,9 +53,9 @@ public class BoundingBoxEditPanel extends GeometricalObjectEditor {
         addChangeListener(modelHeight);
         addChangeListener(modelWidth);
 
-        add(new JLabel("Change start x coordinate"));
+        add(new JLabel("Change x coordinate"));
         add(new JSpinner(modelStartX));
-        add(new JLabel("Change start y coordinate"));
+        add(new JLabel("Change y coordinate"));
         add(new JSpinner(modelStartY));
 
         add(new JLabel("Change width "));

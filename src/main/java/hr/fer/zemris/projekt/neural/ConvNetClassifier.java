@@ -1,8 +1,8 @@
 package hr.fer.zemris.projekt.neural;
 
-import hr.fer.zemris.projekt.Classifier;
 import hr.fer.zemris.projekt.gui.models.BoxPredictionViewModel;
 import hr.fer.zemris.projekt.gui.models.LabeledImageModel;
+import hr.fer.zemris.projekt.image.ImageBuilder;
 import hr.fer.zemris.projekt.image.managers.ImageManager;
 import hr.fer.zemris.projekt.image.models.BoundingBox;
 import hr.fer.zemris.projekt.neural.exceptions.RetrainNetworkException;
@@ -30,6 +30,7 @@ import org.deeplearning4j.util.ModelSerializer;
 import org.jetbrains.annotations.NotNull;
 import org.nd4j.evaluation.classification.Evaluation;
 import org.nd4j.linalg.activations.Activation;
+import org.nd4j.linalg.api.ndarray.INDArray;
 import org.nd4j.linalg.dataset.api.iterator.DataSetIterator;
 import org.nd4j.linalg.dataset.api.preprocessor.DataNormalization;
 import org.nd4j.linalg.dataset.api.preprocessor.ImagePreProcessingScaler;
@@ -44,6 +45,8 @@ import org.slf4j.LoggerFactory;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -66,7 +69,18 @@ public class ConvNetClassifier implements INetwork {
     private static final int DEFAULT_OUTPUT_NUMBER = 10;
     private static final int DEFAULT_NUMBER_EPOCHS = 30;
     private static final int DEFAULT_BATCH_SIZE = 54;
+    private static final ImageBuilder imageBuilder;
 
+
+    static {
+        imageBuilder = new ImageBuilder();
+        imageBuilder.grayscale()
+                .binarization()
+                .border()
+                .dilation()
+                .interpolation(DEFAULT_WIDTH, DEFAULT_HEIGHT)
+                .centreOfMassTranslation();
+    }
 
     private int height;
     private int width;
@@ -183,8 +197,7 @@ public class ConvNetClassifier implements INetwork {
             if (net == null) {
                 net = ModelSerializer.restoreMultiLayerNetwork(new File(NETWORK_PATH));
             }
-            Classifier classifier = Classifier.getInstance();
-            return classifier.outputProbabilities(net, image);
+            return outputProbabilities(net, image);
         } catch (IOException e) {
             return null;
         }
@@ -196,8 +209,7 @@ public class ConvNetClassifier implements INetwork {
             if (net == null) {
                 loadModel(new File(NETWORK_PATH));
             }
-            Classifier classifier = Classifier.getInstance();
-            return classifier.classify(net, image);
+            return classify(net, image);
 
         } catch (IOException e) {
             return -1;
@@ -263,6 +275,9 @@ public class ConvNetClassifier implements INetwork {
                 net.fit(trainIter);
                 trainIter.reset();
             }
+
+            save();
+
         } catch (IOException e) {
             throw new RetrainNetworkException("Some error occurred. Please try again.");
         }
@@ -322,5 +337,34 @@ public class ConvNetClassifier implements INetwork {
                 .backpropType(BackpropType.Standard).build();
 
         return new MultiLayerNetwork(conf);
+    }
+
+    private INDArray loadImage(BufferedImage image) throws IOException {
+        Objects.requireNonNull(image, "Image must not be null!");
+
+
+        BufferedImage binary = imageBuilder.build(image);
+
+        NativeImageLoader imageLoader = new NativeImageLoader(DEFAULT_HEIGHT, DEFAULT_WIDTH, DEFAULT_CHANNELS);
+        ByteArrayOutputStream arrayOutputStream = new ByteArrayOutputStream();
+        ImageIO.write(binary, "png", arrayOutputStream);
+
+
+        INDArray imageAsArray = imageLoader.asMatrix(new ByteArrayInputStream(arrayOutputStream.toByteArray()));
+        DataNormalization scaler = new ImagePreProcessingScaler(0, 1);
+        scaler.transform(imageAsArray);
+        return imageAsArray;
+    }
+
+    private int classify(MultiLayerNetwork net, BufferedImage image) throws IOException {
+        INDArray imageAsArray = loadImage(image);
+        return net.predict(imageAsArray)[0];
+    }
+
+    private double[] outputProbabilities(MultiLayerNetwork net, BufferedImage image) throws IOException {
+        INDArray imageAsArray = loadImage(image);
+        INDArray output = net.output(imageAsArray);
+
+        return output.data().asDouble();
     }
 }
