@@ -30,12 +30,14 @@ import java.util.*;
 public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeListener, IBoundingBoxActionListener,
         IDetectionsModified {
 
+    private static final String NETWORK_PATH = "src/main/resources/digits-model_extended_6.zip";
+
     public static final String ERROR = "error";
     public static final String WARNING = "warning";
     public static final String INFORMATION = "information";
-    private static final String NETWORK_PATH = "src/main/resources/digits-model_extended_6.zip";
 
-    public static MessageProvider provider = MessageProvider.getInstance();
+
+    public static final MessageProvider provider = MessageProvider.getInstance();
 
     public static JList<String> imagesInSelectedDirectory;
     public static JList<BoxPredictionViewModel> boundingBoxes;
@@ -51,7 +53,6 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
 
     public static INetwork net;
 
-
     public static AbstractAction loadDataset;
     private JToggleButton addBoundingBoxBtn;
     private AbstractAction zoomIn;
@@ -64,9 +65,7 @@ public class JLabelingSystem extends JFrame implements IBoundingBoxModelChangeLi
     private AbstractAction exitAction;
     private AbstractAction addBoundingBoxAction;
 
-
     private JLayeredPane layeredPane;
-
 
     private JLabelingSystem() {
         setLocation(0, 0);

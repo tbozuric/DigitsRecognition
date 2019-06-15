@@ -127,7 +127,7 @@ public class DatasetActions {
         }
     }
 
-    public static void saveDataset(Component parent) {
+    static void saveDataset(Component parent) {
 
         if (imagesInSelectedDirectory.getModel().getSize() != classifiedImages.size()) {
             JOptionPane.showMessageDialog(parent, provider.get("save_information"),
