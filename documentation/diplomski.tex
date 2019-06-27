@@ -10,8 +10,11 @@
 \usepackage{amsthm}
 \usepackage{bm}
 \usepackage[thinlines]{easytable}
+\usepackage{float}
+
 
 \captionsetup[table]{name=Tablica}
+
 \theoremstyle{definition}
 \newtheorem{definition}{Definicija}[section]
 
@@ -36,7 +39,7 @@ na dubokim modelima}
 
 \tableofcontents
 \listoffigures
-\listoftables
+
 
 \chapter{Uvod}
 Očitavanjem rukom pisanih identifikacijskih (cijelih) brojeva bavili su se mnogi radovi od kraja 90-ih godina do danas. Tada je fokus bio na samoj klasifikaciji pojedinačnih brojeva, no u ovome radu zadatak uključuje lokalizaciju i klasifikaciju rukom napisanih identifikatora. Za razliku od skeniranog teksta (teksta napisanog na računalu) javlja se dodatan problem specifičnosti rukopisa pojedine osobe. Tako kod rješavanja problema moramo imati na umu da neke osobe brojeve pišu izduženo, neke nakošeno, neke sitnijim fontom dok druge većim. Tako možemo nastaviti nabrajati do u nedogled različite specifičnosti pojedinog rukopisa. Zbog toga je potrebno napraviti model koji će se moći nositi s navedenim problemima. Potrebno je izgraditi model koji će kvalitetno generalizirati, odnosno koji će imati veliku generalizacijsku moć, a neće biti pristran pojedinom rukopisu. Iz navedenog razloga bit će potrebno sakupiti dovoljno veliku bazu rukom pisanih identifikatora od više različitih osoba. 
@@ -45,7 +48,7 @@ U posljednjih nekoliko godina duboko učenje postaje sve popularnije. Jedan od g
 
 Kroz ovaj rad pokazat će se sustav s grafičkim korisničkim sučeljem \engl{Graphical User Interface} koji problem očitavanja rukom pisanih identifikatora rješava kroz četiri faze koje su detaljno opisane u nastavku ovoga rada. Na samome početku ulazna slika se procesira odnosno obrađuje (obavlja se pretvorba u sive nijanse, odvajanje prednjeg plana od pozadine tj. binarizacija, dilatacija, stanjivanje, centriranje metodom centra mase i interpolacija). Takva slika se predaje algoritmu koji traži spojene konture na slici odnosno lokacije pojedinih brojeva koji se naposljetku klasificiraju. Sve to je omogućeno kroz intuitivno i jednostavno grafičko korisničko sučelje koje korisniku omogućava na vrlo efikasan način označavanje tako rukom napisanih brojeva.
 \chapter{Pregled područja}
-Znanstveni članci koji se bave klasifikacijom rukom pisanih znamenaka počinju davati rezultate vrijedne pažnje samim krajem 80-ih godina prošlog stoljeća. Tijekom razvoja sustava za klasificiranje rukom pisanih brojeva kroz povijest nastajale su razne baze podataka koje su korištene za ispitivanje kvalitete odnosno točnosti pojedinog sustava. Prva korištena baza podataka sastojala se od 1200 znamenki, poznatija kao "AT\&T". Baza se sastojala od 10 primjeraka svake znamenke od 12 različitih autora. Najčešće su znamenke od prvih 6 autora pripadale skupu za učenje, dok znamenke od preostalih 6 autora su pripadale skupu za testiranje odnosno validaciju. Zatim je nastala baza rukom pisanih poštanskih brojeva koja se sastojala od 7064 znamenke za treniranje i 2007 znamenaka za testiranje. Glavni nedostatak ovih baza jest vrlo mali skup za učenje i testiranje. U svrhu boljeg vrednovanja modela, nastala je NIST baza znamenaka. Glavni problem te baze je bio što su podaci iz skupa za učenje i skupa za testiranje bili iz potpuno različitih distribucija. Modifikacijom NIST baze rukom pisanih brojeva, nastala je danas najpoznatija baza imena MNIST, što dolazi od \textit{Modified} NIST. Originalno se NIST testni skup sastojao od 58527 slika znamenki napisanih od 500 različitih autora. NIST skup za ispitivanje je podijeljen na primjerke od prvih 250 autora i dodan u novi skup za treniranje, dok su znamenke preostalih 250 autora dodane u skup za testiranje. Tako smo dobili otprilike 30000 znamenki u svakom od skupova. Novi skup za treniranje i testiranje nadopunjen je sa znamenkama iz prethodnog skupa za treniranje iz NIST baze brojeva. Najčešće se koristi 10000 znamenki za testiranje, dok se cijeli skup od 60000 znamenki koristi za treniranje.
+Znanstveni članci koji se bave klasifikacijom rukom pisanih znamenaka počinju davati rezultate vrijedne pažnje samim krajem 80-ih godina prošlog stoljeća. Tijekom razvoja sustava za klasificiranje rukom pisanih brojeva kroz povijest nastajale su razne baze podataka koje su korištene za ispitivanje kvalitete odnosno točnosti pojedinog sustava. Prva korištena baza podataka sastojala se od 1200 znamenki, poznatija kao "AT\&T". Baza se sastojala od 10 primjeraka svake znamenke od 12 različitih autora. Najčešće su znamenke od prvih 6 autora pripadale skupu za učenje, dok znamenke od preostalih 6 autora su pripadale skupu za testiranje odnosno validaciju. Zatim je nastala baza rukom pisanih poštanskih brojeva koja se sastojala od 7064 znamenke za treniranje i 2007 znamenaka za testiranje. Glavni nedostatak ovih baza jest vrlo mali skup za učenje i testiranje. U svrhu boljeg vrednovanja modela, nastala je baza znamenaka NIST. Glavni problem te baze je bio što su podaci iz skupa za učenje i skupa za testiranje bili iz potpuno različitih distribucija. Modifikacijom baze rukom pisanih brojeva NIST, nastala je danas najpoznatija baza imena MNIST, što dolazi od \textit{Modified} NIST. Originalno se testni skup NIST sastojao od 58527 slika znamenki napisanih od 500 različitih autora. Skup za ispitivanje NIST je podijeljen na primjerke od prvih 250 autora i dodan u novi skup za treniranje, dok su znamenke preostalih 250 autora dodane u skup za testiranje. Tako smo dobili otprilike 30000 znamenki u svakom od skupova. Novi skup za treniranje i testiranje nadopunjen je sa znamenkama iz prethodnog skupa za treniranje iz baze brojeva NIST. Najčešće se koristi 10000 znamenki za testiranje, dok se cijeli skup od 60000 znamenki koristi za treniranje.
 
 \iffalse
 Rad koji je davao \texttt{state-of-the-art} rezultate 1990. godine treniran jest nad 9298 znamenaka segmentiranih iz rukom pisanih poštanskih brojeva u Americi. Skup je bio nadopunjen s 3349 printanih znamenaka pisanih s 35 različitih fontova. Test za ispitivanje sadržavao jest 2007 rukom pisanih i 700 printanih znamenaka. Znamenke su bile ručno segmentirane odnosno odvojene jedna od druge. Cilj rada bio je pokazati kako je moguće da dovoljno velika back-propagation mreža može biti primijenjena na problem prepoznavanja slike bez velikog, kompleksnog preprocesiranja. Le Cun je još 1989 u svome radu pokazao kako arhitektura mreže značajno utječe na moć generalizacije same mreže. Smatrali su da dobra generalizacija se može dobiti dizajniranjem arhitekture mreže koja sadrži određenu količinu \textit{a priori} znanja o problemu. Mreža koju su koristili je bila višeslojna, sve konekcije u mreži su bile adaptivne, iako strogo ograničene, te je mreža trenirana koristeći algoritam back-propagation. Ulaz u mrežu bila je $16$x$16$ normalizirana slika na dimenzije $28$x$28$ i izlaz se očekivano sastojao od 10 jedinica. Pretpostavkom kako bi potpuno povezana neuronska mreža imala previše parametara i kako bi njezino treniranje u ono vrijeme trajalo jako dugo vremena, u radu se pojavljuje ideja lokalnih, konvolucijskih mapi značajki koje mogu biti primijenjene u slijednim skrivenim slojevima za ekstrakciju značajki veće kompleksnosti i apstrakcije. Mreža korištena za klasifikaciju je proširenje mreža opisanih u Le Cun 1989 i Le Cun et al., 1990a. Mreža je imala 4 skrivena sloja; H1, H2, H3, H4. Slojevi H1 i H2 bili su ekstraktori značajki s dijeljenim težinama, dok su H2 i H4 bili slojevi za uprosječivanje/sažimanje \engl{averaging/subsampling}. Prvi sloj se sastojao od 4 neovisne 24x24 mape značajki. Drugi sloj je bio sloj za uprosječivanje i sastojao se od 4 mape 12x12, zatim je opet slijedio sloj s 12 mapi značajki dimenzija 8x8, zatim sloj za uprosječivanje od 4 mape dimenzija 4x4 te naposljetku 10 izlaznih jedinica. U konačnici, mreža je imala 4635 jedinica, 98442 konekcije i 2578 neovisnih parametara. Na cijelom skupu za testiranja srednja kvadratna pogreška bila je 0.024, te su se sve pogreške dogodile na rukom klasifikaciji rukom pisanih znamenki.
@@ -53,14 +56,14 @@ Rad koji je davao \texttt{state-of-the-art} rezultate 1990. godine treniran jest
 
 Vrlo zanimljiv članak [\cite{LeCun95comparisonof}] uspoređuje klasifikatore koji su korišteni u brojnim do tada objavljenim znanstvenim člancima i koji su davali zapažljive rezultate. U nastavku slijedi kratak opis klasifikatora koji su se koristili u svrhu rješavanja navedenog zadatka (više detalja dostupno u citiranom članku). Cilj odlomka jest vrlo sažeto prikazati kakve su razne pristupe ljudi pokušavali kako bi dobili što kvalitetnije rezultate. Detaljniji opis s referencama na konkretne radove može se pronaći u detaljnijoj verziji prethodnog članka [\cite{Lecun95learningalgorithms}].
 \\
-Prvi od klasifikatora koji se pojavljuje jest \textit{osnovni linearni klasifikator} \engl{Baseline Linear Classifier}. Kao ulaz u klasifikator korištene su znamenke dimenzija 20x20. Svaka vrijednost ulaznog piksela je sudjelovala u težinskoj sumi za svaku izlaznu jedinicu. Mreža je imala 4010 parametara (dodatnih 10 parametara su vezani za pristranost \engl{bias}) i klasifikator je postigao grešku na MNIST ispitnome skupu od 8.4\%.
+Prvi od klasifikatora koji se pojavljuje jest \textit{osnovni linearni klasifikator} \engl{Baseline Linear Classifier}. Kao ulaz u klasifikator korištene su znamenke dimenzija 20x20. Svaka vrijednost ulaznog slikovnog elementa \engl{pixel} je sudjelovala u težinskoj sumi za svaku izlaznu jedinicu. Mreža je imala 4010 parametara (dodatnih 10 parametara su vezani za pristranost \engl{bias}) i klasifikator je postigao grešku na MNIST ispitnome skupu od 8.4\%.
 \begin{figure}[h]
 \centering
 \includegraphics[scale=0.7]{linear_classifier.png}
-\caption{Osnovni linearni klasifikator}
+\caption{Osnovni linearni klasifikator \\ (preuzeto iz \cite{Lecun95learningalgorithms})}
 \end{figure}
 \\
-Slijedi klasifikator \textit{K najbližih susjeda} \engl{Baseline Nearest Neighbor Classifier} koji kao mjeru udaljenosti koristi Euklidsku udaljenost ulaznih slika. Njegova prednost jest što nema vrijeme učenja, niti je potrebno smišljati arhitekturu mreže. No, glavni mu je nedostatak što svih 60000 slika dimenzija 20x20 moraju biti u memoriji tijekom izvođenja kako bismo za neku ulaznu sliku pronašli kojoj slici odnosno znamenci je ta slika najbliža po Euklidskoj udaljenosti. Greška na MNIST testnome skupu za $k=3$ je bila 2.4\%. Inače, realističnija Euklidska udaljenost najbližeg susjeda bih se računala nad vektorom značajki, a ne direktno nad pikselima, no zbog usporedbe svih klasifikatora koji barataju direktno nad pikselima autor ovog rada odabrao je ovakav način usporedbe.
+Slijedi klasifikator \textit{K najbližih susjeda} \engl{Baseline Nearest Neighbor Classifier} koji kao mjeru udaljenosti koristi Euklidsku udaljenost ulaznih slika. Njegova prednost jest što nema vrijeme učenja, niti je potrebno smišljati arhitekturu mreže. No, glavni mu je nedostatak što svih 60000 slika dimenzija 20x20 moraju biti u memoriji tijekom izvođenja kako bismo za neku ulaznu sliku pronašli kojoj slici odnosno znamenci je ta slika najbliža po Euklidskoj udaljenosti. Greška na MNIST testnome skupu za $k=3$ je bila 2.4\%. Inače, realističnija Euklidska udaljenost najbližeg susjeda bih se računala nad vektorom značajki, a ne direktno nad slikovnim elementima, no zbog usporedbe svih klasifikatora koji barataju direktno nad slikovnim elementima autor ovog rada odabrao je ovakav način usporedbe.
 \\
 \textit{Linearni klasifikator baziran na parovima} \engl{Pairwise Linear Classifier} je jednostavno poboljšanje prvog osnovnog modela jednostavnog linearnog klasifikatora. Ideja je bila da se svaki neuron jednoslojne mreže trenira da klasificira jednu klasu naspram ostalih. Odnosno u konkretnome radu, taj sloj je sadržavao 45 neurona labeliranih kao $0/1$, $0/2$,...,$0/9$,...$8/9$. Neuron $i/j$ je treniran da na izlazu daje $+1$ za uzorke klase $i$, a $-1$ za uzorke klase $j$. Pokazalo se da je rezultat nešto bolji nego s običnim linearnim klasifikatorom, greška je bila 7.6\% na spomenutome skupu.
 \\
@@ -85,14 +88,14 @@ Klasifikator imena \textit{Optimal Margin Classifier - OMC} možemo poistovjetit
 \begin{figure}[h]
 \centering
 \includegraphics[scale=0.5]{omc_hyperplane.png}
-\caption{Prikaz potpornih vektora i decizijske ravnine kod SVM-a}
+\caption{Prikaz potpornih vektora i decizijske ravnine kod SVM-a  \\ (preuzeto iz \cite{Lecun95learningalgorithms})}
 \end{figure}
 
-Pokazalo se da kada je dostupno mnogo uzoraka, da mnoge metode mogu postići respektabilnu točnost. Iako treba primijetiti da neuronske mreže zahtijevaju relativno veliko vrijeme učenja, jednom kada se istreniraju zaključivanje provode mnogo brže i zahtijevaju puno manje memorije nego tehnike bazirane na memoriji. Trenutno najbolji rezultat na MNIST datasetu jest postignut konvolucijskom neuronskom mrežom i iznosi 0.23\% [\cite{6248110}]. Kasnijih godina isprobavani su razni pristupi s konvolucijskim mrežama, SVM-om, klasifikatorom temeljenom na najbližim susjedima itd. Mreže su postajale sve kompleksnije, imale su sve veći kapacitet i moć učenja te danas daju jako dobre rezultate, dok je vrijeme učenja neusporedivo manje. Zanimljiv članak [\cite{6490368}] koji govori o lokalizaciji registarskih oznaka koristeći tehnike procesiranja slike i genetske algoritme, na temelju analize povezanih komponenti pronalazi povezane objekte na samoj slici, a samim time i povezane alfanumeričke znakove unutar registarskih oznaka. Upravo metoda traženja povezanih komponenti je implementirana u ovome radu i davala je vrlo dobre rezultate. U članku [\cite{DL2018}] su iskoristili činjenicu da njihov klasifikator producira vjerojatnosnu distribuciju na izlazu. Zapazili su da kada ulaz sadrži znamenku, klasifikator producira distribuciju s malom entropijom i visokom pouzdanošću ispravne klase. S druge strane, kada ulaz ne sadrži znamenku, klasifikator producira gotovo uniformnu distribuciju. Tu činjenicu koriste za lokalizaciju znamenaka na slici. Sličnom idejom temeljenoj na entropiji i zbunjenosti modela izgrađeni klasifikator se koristi za detekciju potencijalno pogrešno označenih ili klasificiranih graničnih okvira. Više detalja nalazi se u poglavlju o izgrađenom sustavu.
+Pokazalo se da, kada je dostupno mnogo uzoraka, mnoge metode mogu postići respektabilnu točnost. Iako treba primijetiti da neuronske mreže zahtijevaju relativno veliko vrijeme učenja, jednom kada se istreniraju zaključivanje provode mnogo brže i zahtijevaju puno manje memorije nego tehnike bazirane na memoriji. Trenutno najbolji rezultat na skupu uzoraka MNIST postignut jest konvolucijskom neuronskom mrežom i iznosi 0.23\% [\cite{6248110}]. Kasnijih godina isprobavani su razni pristupi s konvolucijskim mrežama, SVM-om, klasifikatorom temeljenom na najbližim susjedima itd. Mreže su postajale sve kompleksnije, imale su sve veći kapacitet i moć učenja te danas daju jako dobre rezultate, dok je vrijeme učenja neusporedivo manje. Zanimljiv članak [\cite{6490368}] koji govori o lokalizaciji registarskih oznaka koristeći tehnike procesiranja slike i genetske algoritme, na temelju analize povezanih komponenti pronalazi povezane objekte na samoj slici, a samim time i povezane alfanumeričke znakove unutar registarskih oznaka. Upravo metoda traženja povezanih komponenti je implementirana u ovome radu i davala je vrlo dobre rezultate. U članku [\cite{DL2018}] su iskoristili činjenicu da njihov klasifikator producira vjerojatnosnu distribuciju na izlazu. Zapazili su da kada ulaz sadrži znamenku, klasifikator producira distribuciju s malom entropijom i visokom pouzdanošću ispravne klase. S druge strane, kada ulaz ne sadrži znamenku, klasifikator producira gotovo uniformnu distribuciju. Tu činjenicu koriste za lokalizaciju znamenaka na slici. Sličnom idejom temeljenoj na entropiji i zbunjenosti modela izgrađeni klasifikator se koristi za detekciju potencijalno pogrešno označenih ili klasificiranih graničnih okvira. Više detalja nalazi se u poglavlju o izgrađenom sustavu.
 \begin{figure}[h]
 \centering
 \includegraphics[scale=0.6]{localization_entropy.png}
-\caption{Primjer lokalizacije na temelju vjerojatnosne distribucije na izlazu klasifikatora}
+\caption{Primjer lokalizacije na temelju vjerojatnosne distribucije na izlazu klasifikatora \\ (preuzeto iz \cite{DL2018})}
 \end{figure}
 
 
@@ -114,13 +117,13 @@ Osnovna procesna jedinica mozga jest neuron. U ljudskom živčanom sustavu može
 \centering
 \includegraphics[width=\linewidth]{neuron_model.jpeg}
 \caption{Umjetni neuron}
-\label{fig:sub2}
+\label{fig:umjetni}
 \end{subfigure}
-\caption{Usporedba modela biološkog i umjetnog neurona}
-\label{fig:test}
+\caption{Usporedba modela biološkog i umjetnog neurona \\ (preuzeto iz \cite{karpathy})}
+\label{fig:usporedba_modela}
 \end{figure}
 
-Akson umjetnog neurona na slici iznad prikazan je kao prijenosna funkcija \engl{transfer function} koja modelira prolaz signala kroz akson biološkog neurona. Općeniti izlaz umjetnog neurona možemo prikazati kao:
+Akson umjetnog neurona na slici \ref{fig:umjetni} prikazan je kao prijenosna funkcija \engl{transfer function} koja modelira prolaz signala kroz akson biološkog neurona. Općeniti izlaz umjetnog neurona možemo prikazati kao:
 \begin{equation}
 output = f(\sum_{i=0}^{n}w_ix_i + b)
 \end{equation}
@@ -190,9 +193,10 @@ $
 }
 \end{subfigure}
 \caption{Prikaz najpoznatijih aktivacijskih funkcija}
+\label{fig:activation_functions}
 \end{figure}
 
-Svaka od navedenih funkcija ima određenih prednosti i mana prilikom učenja mreža što i potiče istraživanje prikladnih aktivacijskih funkcija. Na slici iznad $net$ označava izlazni signal iz tijela stanice prije djelovanja aktivacijske funkcije.
+Svaka od navedenih funkcija ima određenih prednosti i mana prilikom učenja mreža što i potiče istraživanje prikladnih aktivacijskih funkcija. Na slici \ref{fig:activation_functions} $net$ označava izlazni signal iz tijela stanice prije djelovanja aktivacijske funkcije.
 
 \iffalse
 \begin{table}[htbp]
@@ -224,7 +228,7 @@ n=
 Neuronske mreže su modelirane kao kolekcije neurona koji su povezani u acikličkom grafu u slojevitoj arhitekturi. Drugim riječima, izlazi nekih neurona mogu postati ulazi za druge neurone. Ciklusi nisu dozvoljeni jer bi to impliciralo beskonačnu petlju u unaprijednom prolazu kroz mrežu. Za klasične neuronske mreže najčešće korišteni tip sloja jest potpuno povezani sloj \engl{fully-connected layer} u kojem neuroni između dva susjedna sloja su potpuno po parovima povezani. Skup potpuno povezanih slojeva čini potpuno povezanu neuronsku mrežu \engl{fully-connected neural network}. Na slici možemo vidjeti potpuno povezanu neuronsku mrežu s 3 ulaza, dva skrivena sloja pri čemu u svakom od skrivenih slojeva imamo 4 neurona te jednim izlaznim neuronom. Mreža ima [3 x 4] + [4 x 4] + [4 x 1] = 32 težine i 4 + 4 + 1 = 9 pristranosti \engl{bias}.
 \begin{figure}[h]
 \centering
-\includegraphics[scale=0.5]{neural_net2.jpeg}
+\includegraphics[scale=0.5]{neural_net2.png}
 \caption{Potpuno povezana neuronska mreža s dva skrivena sloja}
 \end{figure}
 
@@ -237,13 +241,13 @@ Konvolucijske neuronske mreže slične su običnim neuronskim mrežama, također
 \centering
 \begin{subfigure}{.5\textwidth}
 \centering
-\includegraphics[width=\linewidth]{neural_net2.jpeg}
+\includegraphics[width=\linewidth]{neural_net2.png}
 \caption{Potpuno povezana neuronska mreža}
 \label{fig:sub1}
 \end{subfigure}%
 \begin{subfigure}{.5\textwidth}
 \centering
-\includegraphics[width=\linewidth]{cnn.jpeg}
+\includegraphics[width=\linewidth]{cnn.png}
 \caption{Konvolucijska neuronska mreža}
 \label{fig:sub2}
 \end{subfigure}
@@ -251,10 +255,10 @@ Konvolucijske neuronske mreže slične su običnim neuronskim mrežama, također
 \label{fig:test}
 \end{figure}
 
-Specifičnost konvolucijskih modela jest da su transformacije lokalne, odnosno izlaz ovisi o lokalnom susjedstvu piksela ulaza. Propuštanjem ulazne slike kroz konvolucijski model vršimo transformaciju trodimenzionalnih (3D) tenzora. U nastavku slijedi pregled klasične strukture takvih modela te kratak opis pojedinih slojeva koji su tipični kod konvolucijskih modela.
+Specifičnost konvolucijskih modela jest da su transformacije lokalne, odnosno izlaz ovisi o lokalnom susjedstvu slikovnog elementa ulaza. Propuštanjem ulazne slike kroz konvolucijski model vršimo transformaciju trodimenzionalnih (3D) tenzora. U nastavku slijedi pregled klasične strukture takvih modela te kratak opis pojedinih slojeva koji su tipični kod konvolucijskih modela.
 \begin{figure}
 \centering
-\includegraphics[scale=0.3]{arhitecture.jpeg}
+\includegraphics[scale=0.3]{architecture.png}
 \caption{Primjer arhitekture konvolucijskog modela}
 \end{figure}
 \newpage Prvi od slojeva je konvolucijski sloj koji ekstrahira značajke iz ulazne slike. U najopćenitijem obliku, konvolucija jest operacija nad dvije funkcije s realnim domenama, koja daje modificiranu verziju jedne od dviju ulaznih (originalnih) funkcija.
@@ -297,14 +301,14 @@ Očito jest da crno-bijelu fotografiju (monokromatsku fotografiju) - dimenzija N
 \begin{equation}
 x(n_H, n_W), 0\le n_H \le M-1, 0\le n_W \le N - 1,
 \end{equation}
-gdje su $n_H$ i $n_W$ diskretne prostorne koordinate na osima, a $x(n_H, n_W)$ predstavlja intenzitet piksela na istoj diskretnoj prostornoj koordinati. Vrijednost koje poprima funkcija dvije varijable kreću se u intervalu $[0, 255]$. Slike koje se koriste kao ulaz u implementiranu konvolucijsku mrežu su binarne, odnosno poprimaju vrijednost intenziteta iz skupa \{$0, 255$\} odnosno \{0, 1\}.\newline
+gdje su $n_H$ i $n_W$ diskretne prostorne koordinate na osima, a $x(n_H, n_W)$ predstavlja intenzitet slikovnog elementa na istoj diskretnoj prostornoj koordinati. Vrijednost koje poprima funkcija dvije varijable kreću se u intervalu $[0, 255]$. Slike koje se koriste kao ulaz u implementiranu konvolucijsku mrežu su binarne, odnosno poprimaju vrijednost intenziteta iz skupa \{$0, 255$\} odnosno \{0, 1\}.\newline
 Promatramo li sliku s crvenim, zelenim i plavim kanalom (RGB) odnosno sliku dimenzija N x M x 3, signal možemo prikazati kao vektor 2D signala.
 
 \begin{align*}
 x(n_H, n_W) &= [x_R(n_H, n_W), x_G(n_H, n_W), x_B(n_H, n_W)] \\
 &0\le n_H \le M-1, 0\le n_W \le N - 1,
 \end{align*}
-gdje $x_R$, $x_G$, $x_B$ označavaju intenzitet piksela s obzirom na slijedno crveni, zeleni i plavi kanal.
+gdje $x_R$, $x_G$, $x_B$ označavaju intenzitet slikovnog elementa s obzirom na slijedno crveni, zeleni i plavi kanal.
 
 \begin{definition}
 Konvoluciju 2D slike $x(n_H, n_W)$, dimenzija N x M, s 2D filterom $h(n_H, n_W)$ definiramo kao:
@@ -325,17 +329,17 @@ Očigledno jest da u konkretnoj primjeni nam je svejedno na kojim će pozicijama
 
 Prilikom razmatranja konvolucijskih neuronskih mreža, prvi argument konvolucije najčešće je ulazni uzorak a drugi argument je filter odnosno jezgra \engl{kernel}. Izlaz takve konvolucije nazivamo \textbf{mapa značajki} \engl{feature map}. Također, svaki element ulaznog uzorka i jezgre pohranjujemo zasebno, pa su vrijednosti funkcija u svim točkama nula osim u konačno mnogo točaka čije vrijednosti pohranjujemo. Konkretno, pretpostavljamo da je domena ulaza i jezgre konačan skup, tj. da su funkcije $x$ i $h$ izvan domene jednake 0. U primjenama su obično $x$ i $h$ višedimenzionalne funkcije $x(t), h(t) \in \mathbb{R}^d. $
 
-Konvolucija čuva odnos između piksela učenjem značajki slike. U kontekstu konvolucijskih mreža, konvolucijom smatramo matematičku operaciju koja dobiva dva ulaza, matricu slike i filter odnosno jezgru \engl{kernel}. Konvolucijom slike s različitim filterima možemo vršiti operacije kao što su detekcija rubova, zamućivanje, izoštravanje i slično, te postoje poznati filteri koji se koriste u te svrhe.
+Konvolucija čuva odnos između slikovnih elemenata učenjem značajki slike. U kontekstu konvolucijskih mreža, konvolucijom smatramo matematičku operaciju koja dobiva dva ulaza, matricu slike i filter odnosno jezgru \engl{kernel}. Konvolucijom slike s različitim filterima možemo vršiti operacije kao što su detekcija rubova, zamućivanje, izoštravanje i slično, te postoje poznati filteri koji se koriste u te svrhe.
 
 \begin{figure}[h]
 \centering
 \includegraphics[scale=0.47]{convolution.png}
-\caption{Konvolucija 2D ulaza i jezgre}
+\caption{Konvolucija 2D ulaza i jezgre \\ (preuzeto iz \cite{Goodfellow-et-al-2016})}
 \label{konvolucija_i_jezgra}
 \end{figure}
 
-
-Iz gornje slike možemo primijetiti kako konvolucija modelira lokalne interakcije i dijeli parametre. Elementi odnosno pikseli izlazne mape značajki (označimo je sa $M^l$) ovise o lokalnom susjedstvu elemenata ulazne mape značajki $M^{l-1}$ te se svi elementi mape značajki računaju pomoću istog skupa parametara \engl{shared weights}. Samo dijeljenje parametara ima više prednosti, osim što imamo znatno manji broj parametara dobivamo reprezentaciju ekvivarijantnu s obzirom na pomak.
+//LOOK AT THIS
+Iz gornje slike možemo primijetiti kako konvolucija modelira lokalne interakcije i dijeli parametre. Elementi  izlazne mape značajki (označimo je sa $M^l$) ovise o lokalnom susjedstvu elemenata ulazne mape značajki $M^{l-1}$ te se svi elementi mape značajki računaju pomoću istog skupa parametara \engl{shared weights}. Samo dijeljenje parametara ima više prednosti, osim što imamo znatno manji broj parametara dobivamo reprezentaciju ekvivarijantnu s obzirom na pomak.
 
 
 \begin{figure}[h]
@@ -384,14 +388,14 @@ Kod potpuno povezanog sloja svaki izlaz je povezan sa svim ulazima, dok kod konv
 \begin{figure}[!htb]
 \centering
 \includegraphics[scale=0.25]{lokalna_povezanost_odozdo.png}
-\caption{Prikaz lokalne interakcije kod konvolucijskih mreža i interakcije kod potpuno povezane mreže gledano odozdo. Sivom bojom označen je ulazni neuron $x_3$ i izlazni neuroni $\bm{s}$ na koje utječe označeni ulazni neuron. \textit{Gore}: Kada $\bm{s}$ dobivamo konvolucijom s jezgrom širine 3, samo tri izlaza ovise o ulazu $\bm{x}$. \textit{Dolje}: Kada $\bm{s}$ promatramo u potpuno povezanom sloju, povezanost više nije rijetka, te su svi izlazi ovisni o ulaznom neuronu $x_3$ .}
+\caption{Prikaz lokalne interakcije kod konvolucijskih mreža i interakcije kod potpuno povezane mreže gledano odozdo. Sivom bojom označen je ulazni neuron $x_3$ i izlazni neuroni $\bm{s}$ na koje utječe označeni ulazni neuron. \textit{Gore}: Kada $\bm{s}$ dobivamo konvolucijom s jezgrom širine 3, samo tri izlaza ovise o ulazu $\bm{x}$. \textit{Dolje}: Kada $\bm{s}$ promatramo u potpuno povezanom sloju, povezanost više nije rijetka, te su svi izlazi ovisni o ulaznom neuronu $x_3$ . \\ (preuzeto iz \cite{Goodfellow-et-al-2016})}
 \end{figure}
 \newpage
 
 \begin{figure}[!htb]
 \centering
 \includegraphics[scale=0.25]{lokalna_povetanost_odozgo.png}
-\caption{Prikaz lokalne interakcije kod konvolucijskih mreža i interakcije kod potpuno povezane mreže gledano odozgo. Sivom bojom označen je jedan izlazni neuron $s_3$ i ulazni neuroni u $\bm{x}$ koji utječu na taj izlazni neuron. Ti neuroni su poznati pod nazivom \textbf{receptivno polje} \engl{receptive field} od $s_3$. \textit{Gore}: Kada je $\bm{s}$ dobiven konvolucijom s jezgrom širine 3, samo tri ulaza utječu na $s_3$. \textit{Dolje}: Kada je $\bm{s}$ dobiven matričnim množenjem, odnosno kada imamo potpuno povezani sloj, možemo primijetiti kako svi ulazni neuroni utječu na jedan neuron u idućem sloju, odnosno nemamo rijetku povezanost. }
+\caption{Prikaz lokalne interakcije kod konvolucijskih mreža i interakcije kod potpuno povezane mreže gledano odozgo. Sivom bojom označen je jedan izlazni neuron $s_3$ i ulazni neuroni u $\bm{x}$ koji utječu na taj izlazni neuron. Ti neuroni su poznati pod nazivom \textbf{receptivno polje} \engl{receptive field} od $s_3$. \textit{Gore}: Kada je $\bm{s}$ dobiven konvolucijom s jezgrom širine 3, samo tri ulaza utječu na $s_3$. \textit{Dolje}: Kada je $\bm{s}$ dobiven matričnim množenjem, odnosno kada imamo potpuno povezani sloj, možemo primijetiti kako svi ulazni neuroni utječu na jedan neuron u idućem sloju, odnosno nemamo rijetku povezanost. \\ (preuzeto iz \cite{Goodfellow-et-al-2016}) }
 \end{figure}
 Receptivnim poljem značajke podrazumijevamo skup svih elemenata ulaznog sloja koje mogu utjecati na tu značajku, te je očito da ono raste s dubinom mreže.\newline
 
@@ -454,7 +458,7 @@ Tipično prilikom primjene, sažimanje provodimo bez preklapanja ulaza. Svaku od
 \begin{figure}[h]
 \centering
 \includegraphics[scale=0.5]{pooling.png}
-\caption{Prikaz sažimanja koristeći maksimalnu vrijednost \engl{max-pooling}. Širina kernela na slici je $3$ a korak je $2$. Tako smanjujemo reprezentaciju za faktor $2$, a samim time i reduciramo računski i statistički teret u idućem sloju.}
+\caption{Prikaz sažimanja koristeći maksimalnu vrijednost \engl{max-pooling}. Širina kernela na slici je $3$ a korak je $2$. Tako smanjujemo reprezentaciju za faktor $2$, a samim time i reduciramo računski i statistički teret u idućem sloju. \\ (preuzeto iz \cite{Goodfellow-et-al-2016})}
 \label{konvolucija}
 \end{figure}
 
@@ -464,10 +468,10 @@ Uporabom sažimanja i konvolucija ugrađujemo pretpostavke u naš konvolucijski 
 \section{Pretvorba slike u sive nijanse}
 Prvi korišteni korak prilikom obrade slike jest pretvorba ulazne slike u sive nijanse. Većina digitalnih slika se sastoje od tri odvojena kanala: crveni kanal, zeleni kanal i plavi kanal. Stavljanjem tih slojeva jednog iznad drugog stvaramo sliku u boji. Različiti modeli boja imaju različite kanale, pa tako se možemo susresti sa situacijama kada su kanali boje, neke vrijednosti kao što su svjetlina ili saturacija (zasićenost) i slično. U ovome koraku primaran fokus je postavljen na prethodno spomenute RGB kanale pojedine slike.
 
-Svaki algoritam pretvorbe slike u sive nijanse sastoji se od idućih koraka:
+Svaki algoritam pretvorbe slike u sive nijanse sastoji se od tri koraka.
 
 \begin{enumerate}
-\item Dohvaćanje crvene, zelene i plave vrijednosti piksela
+\item Dohvaćanje crvene, zelene i plave vrijednosti slikovnog elementa
 \item Korištenje matematičke funkcije za preslikavanje tih vrijednosti u specifičnu vrijednost koja predstavlja sivu nijansu
 \item Zamjena crvene, zelene i plave vrijednosti s novo izračunatom vrijednošću sive nijanse
 \end{enumerate}
@@ -495,13 +499,13 @@ Upravo ta formula jest korištena u ovome radu za pretvorbu slika u sive nijanse
 Kao što je napomenuto, sami koeficijenti korišteni u težinskoj sumi, odnosno udio pojedine boje se temelji na brojnim analizama provedenih nad ljudskom shvaćanju boja.
 
 \section{Binarizacija}
-Binarne slike su one slike koje sadrže samo bijele i crne piksele. Odnosno postupkom binarizacije raspon boja od [0, 255] skaliramo na samo dvije vrijednosti (na 0 i 255 odnosno na 0 i 1). U ovome radu binarizacija je korištena za odvajanje prednjeg plana od pozadine, odnosno za odvajanje rukom pisanih identifikatora od bijele pozadine. Za binarizaciju slike u ovome radu korištena je Otsuova metoda koja na vrlo logičan način određuje prag binarizacije.
+Binarne slike su one slike koje sadrže samo bijele i crne slikovne elemente. Odnosno postupkom binarizacije raspon boja od [0, 255] skaliramo na samo dvije vrijednosti (na 0 i 255 odnosno na 0 i 1). U ovome radu binarizacija je korištena za odvajanje prednjeg plana od pozadine, odnosno za odvajanje rukom pisanih identifikatora od bijele pozadine. Za binarizaciju slike u ovome radu korištena je Otsuova metoda koja na vrlo logičan način određuje prag binarizacije.
 \subsection{Otsuova metoda binarizacija}
-Otsuova metoda binarizacije pretpostavlja da ulazna slika čiji prag binarizacije želimo izračunati se sastoji od dvije klase piksela odnosno bi-modalnog histograma. Ako su zadovoljeni preduvjeti, računa se optimalni prag za separaciju tih dviju klasa tako da je varijanca unutar pojedine klase minimalna. Neke od glavnih prednosti ove metode su brzina, kvaliteta separacije klasa i jednostavnost implementacije.
+Otsuova metoda binarizacije pretpostavlja da ulazna slika čiji prag binarizacije želimo izračunati se sastoji od dvije klase slikovnih elemenata odnosno bi-modalnog histograma. Ako su zadovoljeni preduvjeti, računa se optimalni prag za separaciju tih dviju klasa tako da je varijanca unutar pojedine klase minimalna. Neke od glavnih prednosti ove metode su brzina, kvaliteta separacije klasa i jednostavnost implementacije.
 \newline
 \newline
-Prvi korak prilikom binarizacije jest određivanja praga. Sam prag može biti određen ručno (primjerice postavimo li taj prag na 120, svi pikseli čija siva komponenta jest iznad ili jednaka 120 postavimo na 255, dok sve ispod 120 postavimo na 0), no konstantni prag se nije pokazao najboljim u svim situacijama. Naravno, konstantni prag binarizacije je daleko najbrži, no kako ne daje uvijek najbolje rezultate taj prag je najbolje odrediti dinamički od slike do slike.
-Metoda uključuje iteriranje kroz sve moguće vrijednosti praga i računa varijancu unutar razreda sa svake strane praga, odnosno za piksele koji pripadaju prednjem planu i piksele koji pripadaju pozadini. Cilj je pronaći vrijednost praga koja minimizira varijancu unutar razreda, definiranu kao težinsku sumu varijanci dviju klasa:
+Prvi korak prilikom binarizacije jest određivanja praga. Sam prag može biti određen ručno (primjerice postavimo li taj prag na 120, svi slikovni elementi čija siva komponenta jest iznad ili jednaka 120 postavimo na 255, dok sve ispod 120 postavimo na 0), no konstantni prag se nije pokazao najboljim u svim situacijama. Naravno, konstantni prag binarizacije je daleko najbrži, no kako ne daje uvijek najbolje rezultate taj prag je najbolje odrediti dinamički od slike do slike.
+Metoda uključuje iteriranje kroz sve moguće vrijednosti praga i računa varijancu unutar razreda sa svake strane praga, odnosno za slikovne elemente koji pripadaju prednjem planu i slikovne elemente koji pripadaju pozadini. Cilj je pronaći vrijednost praga koja minimizira varijancu unutar razreda, definiranu kao težinsku sumu varijanci dviju klasa:
 
 \begin{equation}
 \sigma^2_{within}(t) = \omega_0(t)\sigma_0^2(t) + \omega_1(t)\sigma_1^2(t)
@@ -533,7 +537,7 @@ U programskim implementacijama u standardnim bibliotekama se koristi maksimizaci
 \mu_T(t) = \sum_{i=0}^{L-1}ip(i)
 \end{aligned}
 \end{equation}
-Navedene relacije mogu se vrlo lako provjeriti:
+Navedene relacije mogu se vrlo lako provjeriti
 \begin{equation}
 \begin{aligned}
 \omega_0\mu_0 + \omega_1\mu_1 = \mu_T \\
@@ -557,7 +561,7 @@ Navedene relacije mogu se vrlo lako provjeriti:
 \begin{figure}[h]
 \centering
 \includegraphics[scale=0.46]{otsu_method.png}
-\caption{Prikaz određivanja praga binarizacije koristeći maksimizaciju varijance između razreda}
+\caption{Prikaz određivanja praga binarizacije koristeći maksimizaciju varijance između razreda \\ (preuzeto iz \cite{ otsu:xxx})}
 \end{figure}
 Krivulja označena crvenom bojom predstavlja vrijednost varijance između razreda za pojedini prag binarizacije.
 \section{Dilatacija}
@@ -615,7 +619,7 @@ C=
 \end{bmatrix}
 \]
 
-Rezultat dobivamo tako da za svaki piksel u $A$ čija je vrijednost $1$, postavimo $b$ te "širimo" piksele u originalnoj slici s obzirom na strukturni element $b$. U radu se pokazalo kako je operacija dilatacije vrlo bitna za kvalitetu dobivenih klasifikacija mreže i pronalazak graničnih okvira oko samih znamenaka.
+Rezultat dobivamo tako da za svaki slikovni element u $A$ čija je vrijednost $1$, postavimo $b$ te "širimo" slikovne elemente u originalnoj slici s obzirom na strukturni element $b$. U radu se pokazalo kako je operacija dilatacije vrlo bitna za kvalitetu dobivenih klasifikacija mreže i pronalazak graničnih okvira oko samih znamenaka.
 
 \section{Stanjivanje}
 U svrhu stanjivanja kontura znamenaka implementiran je Zhang-Seunov algoritam stanjivanja koji radi nad binarnim slikama. Navedeni algoritam se koristi u poznatim bibliotekama za obradu slika poput \textit{OpenCV}-a. Pretpostavimo da promatramo sliku otiska prsta gdje je sam otisak otisnut crnom bojom, dok je pozadina bijele boje.
@@ -623,10 +627,10 @@ U svrhu stanjivanja kontura znamenaka implementiran je Zhang-Seunov algoritam st
 \begin{figure}[h]
 \centering
 \includegraphics[scale=0.46]{thinning.png}
-\caption{Primjer stanjivanja otiska prsta}
+\caption{Primjer stanjivanja otiska prsta  \\ (preuzeto iz \cite{ blog:xxx})}
 \end{figure}
 
-Možemo zamisliti da je svaki crni piksel predstavljen s 1, dok je svaki bijeli piksel predstavljen s vrijednošću 0. Zhang-Seunov algoritam djeluje nad crnim pikselima sa susjedstvom od 8 piksela. To automatski povlači da pikseli na rubovima i u kutevima se ne razmatraju. Za svaki piksel koji se analizira, u nastavku je naveden redoslijed obilaska susjedstva. P1 je piksel koji se analizira.
+Možemo zamisliti da je svaki crni slikovni element predstavljen s 1, dok je svaki bijeli predstavljen s vrijednošću 0. Zhang-Seunov algoritam djeluje nad crnim slikovnim elementima sa susjedstvom od 8 slikovnih elemenata. To automatski povlači da slikovni elementi na rubovima i u kutevima se ne razmatraju. Za svaki slikovni element koji se analizira, u nastavku je naveden redoslijed obilaska susjedstva. P1 je slikovni element koji se analizira.
 
 \[
 \begin{bmatrix}
@@ -637,38 +641,38 @@ P7 & P6 & P5 \\
 \]
 
 U algoritmu se koriste dvije specifične vrijednosti:\newline
-$A(P1)$ - broj prijelaza iz 0-1 odnosno iz bijelog piksela u crni (analogno s prethodnom pretpostavkom o oznakama crnih i bijelih piksela) u sljedećem redoslijedu P2$\Rightarrow$P3$\Rightarrow$P4$\Rightarrow$P5$\Rightarrow$P6$\Rightarrow$P7$\Rightarrow$P8$\Rightarrow$P9$\Rightarrow$P2. Pogledamo li detaljnije matricu prijelaza, možemo uočiti da se krećemo u smjeru kazaljke na satu oko piksela P1, pri čemu se P2 pojavljuje dva puta.\newline
-$B(P1)$ = broj crnih piksela koji su susjedi od P1, odnosno drugim riječima koliko ima crnih piksela od P2 do P9.
+$A(P1)$ - broj prijelaza iz 0-1 odnosno iz bijelog slikovnog elementa u crni (analogno s prethodnom pretpostavkom o oznakama crnih i bijelih slikovnih elemenata) u sljedećem redoslijedu P2$\Rightarrow$P3$\Rightarrow$P4$\Rightarrow$P5$\Rightarrow$P6$\Rightarrow$P7$\Rightarrow$P8$\Rightarrow$P9$\Rightarrow$P2. Pogledamo li detaljnije matricu prijelaza, možemo uočiti da se krećemo u smjeru kazaljke na satu oko slikovnog elementa P1, pri čemu se P2 pojavljuje dva puta.\newline
+$B(P1)$ = broj crnih slikovnih elemenata koji su susjedi od P1, odnosno drugim riječima koliko ima crnih slikovnih elemenata od P2 do P9.
 \newline
 \newline
-Algoritam možemo razmatrati kroz dva koraka:
+Algoritam možemo razmatrati kroz dva koraka navedena u nastavku.
 \newline
 \textbf{Prvi korak}
 \newline
-U prvom koraku tražit ćemo P1 piksele koji zadovoljavaju 5 uvjeta. Ako P1 piksel zadovoljava svih 5 uvjeta, bit će postavljen kao bijeli piksel. Pikseli se postavljaju kao bijeli nakon što se pronađu svi interesantni pikseli jer u suprotnome neće biti konvergencije.
+U prvom koraku tražit ćemo P1 slikovne elemente koji zadovoljavaju 5 uvjeta. Ako P1 slikovni element zadovoljava svih 5 uvjeta, bit će postavljen kao bijeli slikovni element. Slikovni elementi se postavljaju kao bijeli nakon što se pronađu svi interesantni slikovni elementi jer u suprotnome neće biti konvergencije.
 
 \begin{enumerate}
-\item Piksel je crni (P1 = 1) i ima osam susjeda (dakle ne ubrajamo rubove i kuteve)
-\item Broj susjednih crnih piksela za P1 je najmanje 2 a najviše 6, odnosno $2\leq B(P1)\leq6$
-\item Broj prijelaza iz bijelog u crni piksel oko P1 je jednak 1. Dakle, $A(P1) = 1$
-\item P2, P4 ili P6 mora biti bijeli piksel (jednak 0)
-\item P4, P6 ili P8 mora biti bijeli piksel (jednak 0)
+\item Slikovni element je crni (P1 = 1) i ima osam susjeda (dakle ne ubrajamo rubove i kuteve)
+\item Broj susjednih crnih slikovnih elemenata  za P1 je najmanje 2 a najviše 6, odnosno $2\leq B(P1)\leq6$
+\item Broj prijelaza iz bijelog u crni slikovni element oko P1 je jednak 1. Dakle, $A(P1) = 1$
+\item P2, P4 ili P6 mora biti bijeli slikovni element (jednak 0)
+\item P4, P6 ili P8 mora biti bijeli slikovni element (jednak 0)
 \end{enumerate}
-Svi P1 pikseli koji zadovoljavaju gornjih 5 uvjeta se postavljaju kao bijeli, odnosno vrši se stanjivanje.
+Svi P1 slikovni elementi koji zadovoljavaju gornjih 5 uvjeta se postavljaju kao bijeli, odnosno vrši se stanjivanje.
 \newline
 \textbf{Drugi korak}
 \\
 Prva tri dijela drugog koraka identični su kao u prethodnom koraku. Četvrti i peti korak su nešto razlikuju, kao što se može vidjeti u nastavku.
 
 \begin{enumerate}
-\item Piksel je crni (P1 = 1) i ima osam susjeda (dakle ne ubrajamo rubove i kuteve)
-\item Broj susjednih crnih piksela za P1 je najmanje 2 a najviše 6, odnosno $2\leq B(P1)\leq6$
-\item Broj prijelaza iz bijelog u crni piksel oko P1 je jednak 1. Dakle, $A(P1) = 1$
-\item P2, P4 ili \textbf{P8} mora biti bijeli piksel (jednak 0)
-\item \textbf{P2}, P6 ili P8 mora biti bijeli piksel (jednak 0)
+\item Slikovni element je crni (P1 = 1) i ima osam susjeda (dakle ne ubrajamo rubove i kuteve)
+\item Broj susjednih crnih slikovnih elemenata za P1 je najmanje 2 a najviše 6, odnosno $2\leq B(P1)\leq6$
+\item Broj prijelaza iz bijelog u crni slikovni element oko P1 je jednak 1. Dakle, $A(P1) = 1$
+\item P2, P4 ili \textbf{P8} mora biti bijeli slikovni element (jednak 0)
+\item \textbf{P2}, P6 ili P8 mora biti bijeli slikovni element (jednak 0)
 \end{enumerate}
 
-Identično, svi P1 pikseli koji zadovoljavaju ovih 5 uvjeta se postavljaju kao bijeli, ali tek nakon što su pohranjeni pikseli koji zadovoljavaju kriterije. Prvi i drugi korak se ponavljaju dokle god se pikseli više ne mijenjanju.
+Identično, svi P1 slikovni elementi koji zadovoljavaju ovih 5 uvjeta se postavljaju kao bijeli, ali tek nakon što su pohranjeni slikovni elementi koji zadovoljavaju kriterije. Prvi i drugi korak se ponavljaju dokle god se slikovni elementi više ne mijenjanju.
 
 
 \section{Interpolacija}
@@ -677,72 +681,78 @@ Kako duboki model na ulazu mreže za klasifikaciju rukom pisanih identifikatora 
 \begin{figure}[h]
 \centering
 \includegraphics[scale=0.12]{n_n_interpolation.png}
-\caption{Prikaz interpolacije metodom najbližeg susjeda}
+\caption{Prikaz interpolacije metodom najbližeg susjeda \\ (preuzeto iz \cite{interpolation:xxx}}
 \end{figure}
 \section{Translacija}
-Ulazne slike nakon skaliranja mogu se centrirati tako da se izračuna centar mase piksela koji čine konturu pojedine znamenke. Nakon izračuna centra mase konture znamenke (u ovome radu konturu čine bijeli pikseli dok je pozadina crne boje), slika se translatira tako da je pozicija točke koja predstavlja centar mase u središtu skalirane slike. Ista metoda se koristi i u \textit{MNIST}-u, javno dostupnoj bazi rukom pisanih brojeva.
+Ulazne slike nakon skaliranja mogu se centrirati tako da se izračuna centar mase slikovnih elemenata koji čine konturu pojedine znamenke. Nakon izračuna centra mase konture znamenke (u ovome radu konturu čine bijeli slikovni elementi dok je pozadina crne boje), slika se translatira tako da je pozicija točke koja predstavlja centar mase u središtu skalirane slike. Ista metoda se koristi i u \textit{MNIST}-u, javno dostupnoj bazi rukom pisanih brojeva.
 \section{Pronalazak povezanih komponenti}
 Nakon obrade pojedine ulazne slike na kojoj se nalaze rukom pisani identifikatori potrebno je pronaći granične okvire oko svih znamenaka koje se pojavljuju na slici. Nakon pronalaska svih graničnih okvira, svaki okvir se smatra jednom ulaznom slikom za mrežu. Kako bi mreža uspješno mogla klasificirati pojedinu znamenku bitno je da što reprezentativnije pronađemo znamenke koje se nalaze na pojedinoj slici. Kako bismo to postigli koristi se efikasna metoda pronalaska povezanih komponenti \engl{Connected Component Labelling}. Upravo zato što sama metoda pronalazi povezane komponente, vrlo je bitno da dilatacijom dobivamo stvarne, neisprekidane konture znamenaka ili u suprotnom ćemo neprecizno pronalaziti granične okvire. Zbog toga nakon pronalaska graničnih okvira, slijedi niz dodatnih analiza. Jedna od njih jest  vertikalna analiza udaljenosti pojedinih graničnih okvira. Ako su dva granična okvira iste širine, te su neznatno vertikalno udaljeni jedan od drugoga, spajamo ih u jedan okvir kao uniju dosadašnjih graničnih okvira. Pretpostavka se tijekom testiranja implementiranog sustava pokazala vrlo korisnom, odnosno dovela jest do smanjenja broja pogrešno označenih graničnih okvira. Više o korištenim analizama detaljnije je opisano u nastavku. \newline\newline
-U kontekstu analize algoritma u nastavku labeliranjem se smatra pridjeljivanje određene vrijednosti pikselu. Dakle, problem se svodi na labeliranje povezanih regija na slici. Cilj jest po završetku algoritma da povezane regije imaju iste labele. Klasični algoritam je osmišljen još u prošlom stoljeću, 1966. godine dizajnirali su ga Rosenfeld i Pfalz. Algoritam koristi strukturu \textbf{union-find} za rješavanje navedenog problema. Struktura union-find ima primjene u teoriji grafova za efikasno ispitivanje povezanosti čvorova u grafu. Sama struktura podržava spajanje dviju grupa i upit jesu li neka dva elementa u istoj grupi. Svaka grupa je stablo gdje je korijen zastupnik te grupe. Spajanje dviju grupa vršimo tako da zastupnika grupe prvog elementa spojimo kao dijete zastupnika drugog elementa. Kako bismo se riješili dugih lanaca ovdje možemo ubaciti provjeru koja u $50\%$ slučajeva zamijeni ta dva elementa. Da bismo provjerili jesu li 2 elementa u istoj grupi, moramo usporediti njihove zastupnike, odnosno korijene njihovih stabala. Prilikom traženja zastupnika možemo svu njegovu djecu koju prođemo spojiti direktno na njega. Zbog ovih dviju optimizacija obje operacije (\texttt{union}, \texttt{find}) imaju amortiziranu $\mathcal{O}(1)$ složenost.
+U kontekstu analize algoritma u nastavku labeliranjem se smatra pridjeljivanje određene vrijednosti slikovnom elementu. Dakle, problem se svodi na labeliranje povezanih regija na slici. Cilj jest po završetku algoritma da povezane regije imaju iste labele. Klasični algoritam je osmišljen još u prošlom stoljeću, 1966. godine dizajnirali su ga Rosenfeld i Pfalz. Algoritam koristi strukturu \textit{union find} za rješavanje navedenog problema. Struktura \textit{union find} ima primjene u teoriji grafova za efikasno ispitivanje povezanosti čvorova u grafu. Sama struktura podržava spajanje dviju grupa i upit jesu li neka dva elementa u istoj grupi. Svaka grupa je stablo gdje je korijen zastupnik te grupe. Spajanje dviju grupa vršimo tako da zastupnika grupe prvog elementa spojimo kao dijete zastupnika drugog elementa. Kako bismo se riješili dugih lanaca ovdje možemo ubaciti provjeru koja u $50\%$ slučajeva zamijeni ta dva elementa. Da bismo provjerili jesu li 2 elementa u istoj grupi, moramo usporediti njihove zastupnike, odnosno korijene njihovih stabala. Prilikom traženja zastupnika možemo svu njegovu djecu koju prođemo spojiti direktno na njega. Zbog ovih dviju optimizacija obje operacije (\textit{union}, \textit{find}) imaju amortiziranu $\mathcal{O}(1)$ složenost.
 \\
 \\
 \textbf{Algoritam}:
-U prvom prolazu algoritma provjeravamo svaki piksel jednog po jednog, krenuvši od gornjeg lijevog ugla do donjeg desnog ugla.
+U prvom prolazu algoritma provjeravamo svaki slikovni element jednog po jednog, krenuvši od gornjeg lijevog ugla do donjeg desnog ugla.
+\begin{figure}[h]
+	\begin{center}
+		\begin{tikzpicture}
+		[%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		box/.style={rectangle,draw=black,thick, minimum size=1cm},
+		]%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		
+		\foreach \x in {0,1,...,5}{
+			\foreach \y in {0,1,...,3}
+			\node[box] at (\x,\y){};
+		}
+		\node[box,fill=red] at (1,1){};
+		\node[box,fill=red ] at (2,2){};
+		\node at (2,1) {P};
+		\end{tikzpicture}
+	\end{center}
+\caption{Prikaz slikovnih elemenata koji se razmatraju prilikom pronalaska povezanih komponenti}
+\end{figure}
 
-\begin{center}
-\begin{tikzpicture}
-[%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-box/.style={rectangle,draw=black,thick, minimum size=1cm},
-]%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\foreach \x in {0,1,...,5}{
-\foreach \y in {0,1,...,3}
-\node[box] at (\x,\y){};
-}
-\node[box,fill=red] at (1,1){};
-\node[box,fill=red ] at (2,2){};
-\node at (2,1) {P};
-\end{tikzpicture}
-\end{center}
-Razmatramo li piksel P, provjeravamo samo crvene piksele. Tako, u svakom trenutku izvođenja algoritma, u memoriji moramo imati samo dva retka piksela slike.
+Razmatramo li slikovni element P, provjeravamo samo crvene slikovne elemente. Tako, u svakom trenutku izvođenja algoritma, u memoriji moramo imati samo dva retka slikovnih elemenata slike.
 \begin{enumerate}
-\item Provjeravamo je li trenutni piksel interesantan za razmatranje. Ako pripada pozadini, piksel ignoriramo i pomičemo se slijedno na idući piksel. Ako piksel pripada prednjem planu, krećemo na idući korak.
-\item Dohvaćamo labele piksela iznad i lijevo od piksela P. Pohranjujemo vrijednosti u varijable (nazovimo te varijable A i B).
-\item Ako piksel iznad i/ili lijevo nije piksel pozadine, krećemo na idući korak. Inače, ako su oba piksela, pikseli pozadine, ne možemo dohvatiti labele i kreiramo novu labelu te je pohranjujemo u A i B.
-\item Uspoređujemo vrijednosti u varijablama A i B. Manju vrijednost pohranjujemo kao labelu piksela P.
-\item Pretpostavimo da imamo situaciju u kojoj piksel iznad ima labelu A i piksel lijevo ima labelu B. No, očito jest da su te dvije labele povezane (povezuje ih trenutni piksel P).
+\item Provjeravamo je li trenutni slikovni element interesantan za razmatranje. Ako pripada pozadini, slikovni element ignoriramo i pomičemo se slijedno na idući. Ako pripada prednjem planu, krećemo na idući korak.
+\item Dohvaćamo labele slikovnih elemenata iznad i lijevo od slikovnog elementa P. Pohranjujemo vrijednosti u varijable (nazovimo te varijable A i B).
+\item Ako slikovni element iznad i/ili lijevo nije element pozadine, krećemo na idući korak. Inače, ako su oba slikovna elementa, elementi pozadine, ne možemo dohvatiti labele i kreiramo novu labelu te je pohranjujemo u A i B.
+\item Uspoređujemo vrijednosti u varijablama A i B. Manju vrijednost pohranjujemo kao labelu slikovnog elementa P.
+\item Pretpostavimo da imamo situaciju u kojoj slikovni element iznad ima labelu A i slikovni element lijevo ima labelu B. No, očito jest da su te dvije labele povezane (povezuje ih trenutni slikovni element P).
+\begin{figure}[h]
 \begin{center}
-\begin{tikzpicture}
-[%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-box/.style={rectangle,draw=black,thick, minimum size=1cm},
-]%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\foreach \x in {0,1,...,5}{
-\foreach \y in {0,1,...,3}
-\node[box] at (\x,\y){};
-}
-\node[box,fill=orange] at (2,3){};
-\node[box,fill=orange ] at (3,3){};
-\node[box,fill=orange ] at (4,3){};
-\node[box,fill=green ] at (2,2) {P};
-\node[box,fill=yellow ] at (1,2){};
-\node[box,fill=yellow ] at (0,2){};
-\node[box,fill=yellow ] at (0,3){};
-
-
-\end{tikzpicture}
+	\begin{tikzpicture}
+	[%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	box/.style={rectangle,draw=black,thick, minimum size=1cm},
+	]%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+	
+	\foreach \x in {0,1,...,5}{
+		\foreach \y in {0,1,...,3}
+		\node[box] at (\x,\y){};
+	}
+	\node[box,fill=orange] at (2,3){};
+	\node[box,fill=orange ] at (3,3){};
+	\node[box,fill=orange ] at (4,3){};
+	\node[box,fill=green ] at (2,2) {P};
+	\node[box,fill=yellow ] at (1,2){};
+	\node[box,fill=yellow ] at (0,2){};
+	\node[box,fill=yellow ] at (0,3){};
+	
+	
+	\end{tikzpicture}
 \end{center}
-Tada moramo pohraniti informaciju da su labele A i B jednake. Tu se u igru uključuje gore spomenuta struktura union-find. Postavljamo labelu A kao dijete od labele B. Ta informacija će nam kasnije biti korisna u drugom prolazu algoritma kako bi "počistili nered". Bitno jest napomenuti da manja labela se pridružuje pikselu P, a veća labela postaje dijete od manje labele. Inicijalno je svaka nova labela svoj zastupnik te prolazom kroz piksele može postati dijete neke druge labele.
-\item Prelazimo na idući piksel.
+\caption{Povezane komponente označene različitim labelama}
+\end{figure}
+Tada moramo pohraniti informaciju da su labele A i B jednake. Tu se u igru uključuje gore spomenuta struktura \textit{union find}. Postavljamo labelu A kao dijete od labele B. Ta informacija će nam kasnije biti korisna u drugom prolazu algoritma kako bi "počistili nered". Bitno jest napomenuti da manja labela se pridružuje slikovnom elementu P, a veća labela postaje dijete od manje labele. Inicijalno je svaka nova labela svoj zastupnik te prolazom kroz slikovne elemente može postati dijete neke druge labele.
+\item Prelazimo na idući slikovni element.
 \end{enumerate}
-U drugom prolazu algoritma također idemo piksel po piksel, od gornjeg lijevog kuta do donjeg desnog.
+U drugom prolazu algoritma također idemo slikovni element po element, od gornjeg lijevog kuta do donjeg desnog.
 \begin{enumerate}
-\item Provjeravamo za piksel je li zastupnik u union-find strukturi. Ako jest, idemo na idući piksel i ponavljamo postupak.
-\item Inače, pratimo poveznicu do zastupnika grupe. Kada smo pronašli zastupnika grupe, dodjeljujemo nađenu labelu trenutnom pikselu.
+\item Provjeravamo za slikovni element je li zastupnik u strukturi \textit{union find}. Ako jest, idemo na idući slikovni element i ponavljamo postupak.
+\item Inače, pratimo poveznicu do zastupnika grupe. Kada smo pronašli zastupnika grupe, dodjeljujemo nađenu labelu trenutnom slikovnom elementu.
 \end{enumerate}
-
 \subsection{Primjer rada algoritma}
-Pretpostavimo da imamo binarnu sliku gdje 1 označava bijeli piksel, dok 0 označava crni piksel. Zanima nas labeliranje bijelih piksela.
+\begin{figure}[H]
+	Pretpostavimo da promatramo binarnu sliku \ref{fig:binary_image} gdje 1 označava bijeli slikovni element, dok 0 označava crni. Zanima nas labeliranje bijelih slikovnih elemenata.
 \begin{center}
 \begin{tikzpicture}
 [%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -781,9 +791,11 @@ box/.style={rectangle,draw=black,thick, minimum size=1cm},
 \node[box,fill=black ] at (6,7){};
 \end{tikzpicture}
 \end{center}
-
-Prva specifična situacija na danoj slici se dešava kada promatramo treći redak i četvrti stupac. Imamo piksele i lijevo i iznad spomenutog piksela, i oba imaju različite labele. Kao što je prethodno spomenuto, uzimamo labelu s manjom vrijednošću i postavljamo je na poziciju $(3,4)$, dakle labelu s vrijednošću 1. Također, labelu $2$ (numerički veća labela) pohranjujemo kao dijete od labele $1$ koristeći union-find strukturu podataka.
-
+\caption{Binarna slika za demonstraciju pronalaska povezanih komponenti}
+\label{fig:binary_image}
+\end{figure}
+Prva specifična situacija se dešava kada promatramo treći redak i četvrti stupac $(3,4)$ kao što je prikazano na slici \ref{fig:different_labels}. Imamo slikove elemente i lijevo i iznad spomenutog slikovnog elementa, i oba imaju različite labele. Kao što je prethodno spomenuto, uzimamo labelu s manjom vrijednošću i postavljamo je na poziciju $(3,4)$, dakle labelu s vrijednošću 1. Također, labelu $2$ (numerički veća labela) pohranjujemo kao dijete od labele $1$ koristeći strukturu \textit{union find}. Dakle, u strukturi \textit{union find} nakon obrade ovog slikovnog elementa imamo pohranjeno da je labela $2$ dijete od labele $1$.
+\begin{figure}[H]
 \begin{center}
 \begin{tikzpicture}
 [%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -841,8 +853,11 @@ box/.style={rectangle,draw=black,thick, minimum size=1cm},
 \node[box,fill=black ] at (6,7){};
 \end{tikzpicture}
 \end{center}
-Dakle, u strukturi union-find nakon obrade ovog piksela imamo pohranjeno da je labela $2$ dijete od labele $1$.\newpage
-Pratimo li dalje korake prethodno opisanog prvog prolaza algoritma naposljetku dobivamo sljedeću strukturu na slici:
+\caption{Primjer slikovnog elementa $(3, 4)$ koji povezuje različito labelirane komponente}
+\label{fig:different_labels}
+\end{figure}
+\begin{figure}[H]
+	Pratimo li dalje korake prethodno opisanog prvog prolaza algoritma naposljetku dobivamo strukturu kao na slici \ref{fig:first_step}.
 \begin{center}
 \begin{tikzpicture}
 [%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -927,8 +942,13 @@ box/.style={rectangle,draw=black,thick, minimum size=1cm},
 \node[box,fill=black ] at (6,7){};
 \end{tikzpicture}
 \end{center}
-Nakon završenog prvog koraka labela s vrijednošću $2$ je dijete labele $1$, labela $6$ je dijete labele $4$ i labela $7$ je dijete labele $3$.
-U idućem prolazu na temelju odnosa dijete-roditelj filtriramo odnose, kao što je prethodno opisano, te u konačnici imamo sljedeću situaciju:
+\caption{Labele nakon prvog prolaza algoritma}
+\label{fig:first_step}
+\end{figure}
+
+\begin{figure}[H]
+	Nakon završenog prvog koraka labela s vrijednošću $2$ je dijete labele $1$, labela $6$ je dijete labele $4$ i labela $7$ je dijete labele $3$.
+	U idućem prolazu na temelju odnosa dijete-roditelj vršimo filtriranje, kao što je prethodno opisano, te u konačnici imamo situaciju kao na slici \ref{fig:second_step}.
 \begin{center}
 \begin{tikzpicture}
 [%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1013,6 +1033,9 @@ box/.style={rectangle,draw=black,thick, minimum size=1cm},
 \node[box,fill=black ] at (6,7){};
 \end{tikzpicture}
 \end{center}
+\caption{Pronađene povezane komponente}
+\label{fig:second_step}
+\end{figure}
 Ovo je upravo rezultat koji smo inicijalno željeli dobiti, te možemo uočiti kako je svaka povezana regija poprimila specifičnu labelu koja je predstavnik same regije.
 
 \chapter{Izgrađeni sustav}
@@ -1043,9 +1066,10 @@ Dakle, razlika u odnosu na osnovni algoritam jest u tome da gradijent računamo 
 \centering
 \includegraphics[scale=0.4]{arhitektura_neuronske_mreze.png}
 \caption{Arhitektura izgrađenog konvolucijskog modela}
+\label{fig:arhitecture}
 \end{figure}
 
-Na slici iznad možemo vidjeti arhitekturu izgrađene konvolucijske neuronske mreže. Nakon ulaznog sloja 28x28x1 slijedi konvolucijski sloj s jezgrom dimenzija [5, 5] i pomakom [1, 1], bez nadopunjavanja. Kao prijenosna odnosno aktivacijska funkcija koristi se funkcija identiteta. Zatim slijedi sloj za sažimanje maksimalnom vrijednošću, koristi jezgru dimenzija [2, 2] s pomakom [2, 2], također bez nadopunjavanja. Idući sloj je opet konvolucijski s jezgrom dimenzija [5, 5] i pomakom [1, 1], no kao aktivacijsku funkciju koristi ispravljenu linearnu funkciju ReLu. Slijedi identični sloj za sažimanje maksimalnom vrijednošću, te na kraju potpuno povezani sloj s ispravljenom linearnom aktivacijskom funkcijom koji se veže na 10 izlaza (za svaku znamenku imamo po jedan izlaz).
+Na slici \ref{fig:arhitecture} možemo vidjeti arhitekturu izgrađene konvolucijske neuronske mreže. Nakon ulaznog sloja 28x28x1 slijedi konvolucijski sloj s jezgrom dimenzija [5, 5] i pomakom [1, 1], bez nadopunjavanja. Kao prijenosna odnosno aktivacijska funkcija koristi se funkcija identiteta. Zatim slijedi sloj za sažimanje maksimalnom vrijednošću, koristi jezgru dimenzija [2, 2] s pomakom [2, 2], također bez nadopunjavanja. Idući sloj je opet konvolucijski s jezgrom dimenzija [5, 5] i pomakom [1, 1], no kao aktivacijsku funkciju koristi ispravljenu linearnu funkciju ReLu. Slijedi identični sloj za sažimanje maksimalnom vrijednošću, te na kraju potpuno povezani sloj s ispravljenom linearnom aktivacijskom funkcijom koji se veže na 10 izlaza (za svaku znamenku imamo po jedan izlaz).
 
 \begin{figure}[h]
 \centering
@@ -1071,7 +1095,7 @@ Odziv je definiran omjerom broja primjera koje je klasifikator označio kao pozi
 $R = \frac{TP}{TP + FN}$. Još se i naziva \textit{true positive rate}.
 \newline
 F1 mjeru definiramo kao harmonijsku sredinu između preciznosti i odziva:
-$F1 = \frac{2}{\frac{1}{P} + \frac{1}{R}} = \frac{2PR}{P + R}$. Kako se svaka matrica dimenzija NxN može svesti na matricu dimenzija 2x2 za svaku od $N$ klasa (ukupno N matrica 2x2), navedene formule možemo koristiti za računanje mjera naše 10x10 matrice zabune i dobivamo rezultate kao u tablici ispod.
+$F1 = \frac{2}{\frac{1}{P} + \frac{1}{R}} = \frac{2PR}{P + R}$. Kako se svaka matrica dimenzija NxN može svesti na matricu dimenzija 2x2 za svaku od $N$ klasa (ukupno N matrica 2x2), navedene formule možemo koristiti za računanje mjera naše 10x10 matrice zabune i dobivamo rezultate kao u tablici \ref{tab:evaluation-matrix}.
 \newline
 Iz tablice evaluacije modela možemo primijetiti kako implementirani klasifikator na testnome skupu postiže gotovo 97\% za svaku od mjera.
 
@@ -1131,9 +1155,9 @@ U fazi postprocesiranja sustav može predvidjeti koje znamenke su vjerojatno kri
 \end{equation}
 pri čemu je $H(P)$ entropija distribucije i $x$ pojedini događaj čiju vjerojatnost razmatramo. Općenito, entropiju možemo promatrati kao mjeru nesigurnosti ili neodređenosti tako da sama definicija zbunjenosti se pokazuje kao smislena. Maksimalna prihvatljiva zbunjenost modela dobivena je eksperimentalnim putem. Ako je sigurnost klasifikatora u svoju odluku manja od 50\% i ako je njegova zbunjenost veća od eksperimentalno dobivene vrijednosti, promatrani okvir se šalje na analizu kliznim prozorom \engl{sliding window}. Istovjetno se postupa ako je širina okvira barem $1.5$ puta veća od prosječne širine.
 \newline
-Metoda zadužena za analizu okvira kliznim prozorom pokušava koristeći različite veličine kliznog prozora razdijeliti okvir na dijelove kako bi zbunjenost modela bila minimalna. Metoda na početku za prvu od definiranih veličina kliznih prozora uzme prvih $N$ piksela okvira te računa zbunjenost modela. Zatim uzme još $N$ piksela okvira, dakle ukupno $2N$ piksela je širina okvira i ponovno računa zbunjenost modela. Analogno se okvir obrađuje dok se ne dođe do kraja slike. U tom trenutku računa se za koju širinu slike je postignuta najmanja zbunjenost. Ako je zbunjenost najmanja za inicijalni okvir, nastavlja se sa sljedećom veličinom kliznog prozora. U suprotnome, ulazni okvir se analizira ekvivalentno od točke za koju je utvrđeno da model ima najmanju zbunjenost. Dakle, nastavlja se analiza s preostalim dijelom okvira, a pronađeni okvir se dodaje u novi skup okvira. Nakon što završi analiza, traži se minimalna zbunjenost postignuta za različite veličine kliznog prozora. Kako bi se više kažnjavala veća zbunjenost prilikom traženja najadekvatnije podjele okvira računa se suma kvadrata zbunjenosti za svaku veličinu kliznog prozora. Dobivamo li primjerice za jednu veličinu prozora da je najmanja zbunjenost da se okvir uopće ne dijeli, dok za drugu veličinu prozora kao izlaz dobivamo da je najbolje okvir podijeliti na 3 dijela, potrebno je regulirati utjecaj pojedinih faktora u navedenoj sumi kako podjela sa samo jednim okvirom i relativno velikom zbunjenošću se ne bi preferirala naspram podjele koja daje znatno manje zbunjenosti, no u sumi dovodi do znatno većeg utjecaja. Konačan izraz korišten za traženje podjele s najmanjom zbunjenosti je dan u nastavku:
+Metoda zadužena za analizu okvira kliznim prozorom pokušava koristeći različite veličine kliznog prozora razdijeliti okvir na dijelove kako bi zbunjenost modela bila minimalna. Metoda na početku za prvu od definiranih veličina kliznih prozora uzme prvih $N$ slikovnih elemenata okvira te računa zbunjenost modela. Zatim uzme još $N$ slikovnih elemenata okvira, dakle ukupno $2N$ slikovnih elemenata je širina okvira i ponovno računa zbunjenost modela. Analogno se okvir obrađuje dok se ne dođe do kraja slike. U tom trenutku računa se za koju širinu slike je postignuta najmanja zbunjenost. Ako je zbunjenost najmanja za inicijalni okvir, nastavlja se sa sljedećom veličinom kliznog prozora. U suprotnome, ulazni okvir se analizira ekvivalentno od točke za koju je utvrđeno da model ima najmanju zbunjenost. Dakle, nastavlja se analiza s preostalim dijelom okvira, a pronađeni okvir se dodaje u novi skup okvira. Nakon što završi analiza, traži se minimalna zbunjenost postignuta za različite veličine kliznog prozora. Kako bi se više kažnjavala veća zbunjenost prilikom traženja najadekvatnije podjele okvira računa se suma kvadrata zbunjenosti za svaku veličinu kliznog prozora. Dobivamo li primjerice za jednu veličinu prozora da je najmanja zbunjenost da se okvir uopće ne dijeli, dok za drugu veličinu prozora kao izlaz dobivamo da je najbolje okvir podijeliti na 3 dijela, potrebno je regulirati utjecaj pojedinih faktora u navedenoj sumi kako podjela sa samo jednim okvirom i relativno velikom zbunjenošću se ne bi preferirala naspram podjele koja daje znatno manje zbunjenosti, no u sumi dovodi do znatno većeg utjecaja. Konačan izraz korišten za traženje podjele s najmanjom zbunjenosti je dan u nastavku:
 \begin{equation}
-Utjecaj = \sum_{i = 0}^{i = broj\ okvira - 1} zbunjenost_{i}^2 \cdot \exp(-i)
+Utjecaj = \sum_{i = 0}^{i = broj\ okvira - 1} zbunjenost_{i}^2 \cdot  {\rm e}^{-i}
 \end{equation}
 Primjer u nastavku demonstrira rad sustava za predviđanje potencijalno pogrešno označenih okvira oko znamenaka. Izvorno su parovi znamenaka (3, 6), (9, 9) i (7, 3) imali po jedan granični okvir, odnosno bili su labelirani kao jedna znamenka. Sustav za postprocesiranje je na temelju prosječne širine, zbunjenosti i sigurnosti klasifikatora pretpostavio da se radi o pogrešci i ispravno označio okvire crvenom bojom. Metodom kliznog prozora sustav je uspješno razriješio situaciju i odvojio znamenke (3, 6) i (7, 3) i uspješno ih klasificirao, no znamenke (9, 9) ipak su ostale spojene u jedan okvir. Vidljivo je sa slike kako je donji završetak znamenke 9 spojen s gornjim dijelom, pa tako vjerojatno klasifikator nije uspio dobiti bolje rezultate koristeći metodu kliznog prozora zbog same nečitljivosti napisane znamenke. Pokazalo se da metodom postprocesiranja sustav gotovo uvijek ispravno pronađe "sumnjive" okvire, i u velikom broju situacija ih uspješno rješava. Označavanjem "sumnjivih" okvira crvenom bojom, korisnik odmah nakon uspješno odrađene lokalizacije i klasifikacije modela, ima vizualnu sugestiju okvira koje bi bilo poželjno ručno pregledati i eventualno napraviti izmjene. Nakon uvođenja podsustava za postprocesiranje, cjelokupni sustav je davao značajno kvalitetnije rezultate na "problematičnim" ulaznim slikama.
 \begin{figure}[h]
@@ -1156,14 +1180,14 @@ Prilikom označavanja svake od slika, u svrhu generiranja preciznog i konzistent
 \begin{figure}[h]
 	\centering
 	\includegraphics[scale=0.6]{system_arhitecture.png}
-	\caption{Tok ulazne slike kroz izgrađeni sustav}
+	\caption{Tok obrade ulazne slike kroz izgrađeni sustav}
 \end{figure}
 
 
 
 \chapter{Rezultati}
 Izgrađeni sustav je pokazao na sakupljenom skupu od nešto više od desetak različitih distribucija sakupljenih rukopisa vrlo dobre rezultate. Na ulaznim uzorcima na kojima su znamenke bile razmaknute, sustav je u velikom postotku uspješno pronalazio granične okvire i klasificirao iste. Nakon izrade postprocesora, značajan napredak se pokazao i na slikama gdje su znamenke vrlo gusto napisane.
-Prilikom implementacije isprobano je više različitih metoda procesiranja ulazne slike i klasifikatora. Prilikom procesiranja ulazne slike, pokazalo se da stanjivanje kontura \textit{Zhang-Seunovom} metodom ne doprinosi značajnijim rezultatima u radu klasifikatora. Zbog toga prilikom obrade ulazne slike kao što je ranije spomenuto, dilatacija je zadnji korak pri obradi slike. Također, isprobano je više različitih modela s različitim brojem slojeva, aktivacijskim funkcijama, različitim skupovima za učenje i ispitivanje. Model učen samo na MNIST skupu za učenje je postigao bolje rezultate prilikom evaluacije modela na testnome skupu iz istog MNIST skupa podataka, no na stvarnim uzorcima su rezultati bili mnogo lošiji od rezultata dobivenih nad vlastitim skupom za učenje i testiranje. Uz izgrađeni sustav za lokalizaciju i klasifikaciju promatrani su duboki modeli specifični za detekciju objekata na slici. Neki od najpoznatijih takvih modela su konvolucijske neuronske mreže temeljene na regijama (\textit{R-CNN, Fast R-CNN, Faster R-CNN,  ...}) čije već istrenirane modele nad poznatim skupovima podataka možemo pronaći u TensorFlow Object Detection aplikacijskom programskom sučelju. Isproban je jednostavan primjer koristeći \textit{You only look once} (YOLO) model za detekciju objekata, no zaključeno je na testnome problemu da će kvalitetnije svoju zadaću obavljati sustav implementiran u ovome radu. U konačnici, implementirani sustav s visokim postotkom uspješnosti rješava lokalizacijske i klasifikacijske probleme rukom pisanih znamenaka odnosno identifikatora.
+Prilikom implementacije isprobano je više različitih metoda procesiranja ulazne slike i klasifikatora. Prilikom procesiranja ulazne slike, pokazalo se da stanjivanje kontura \textit{Zhang-Seunovom} metodom ne doprinosi značajnijim rezultatima u radu klasifikatora. Zbog toga prilikom obrade ulazne slike kao što je ranije spomenuto, dilatacija je zadnji korak pri obradi slike. Također, isprobano je više različitih modela s različitim brojem slojeva, aktivacijskim funkcijama, različitim skupovima za učenje i ispitivanje. Model učen samo na MNIST skupu za učenje je postigao bolje rezultate prilikom evaluacije modela na testnome skupu iz istog MNIST skupa podataka, no na stvarnim uzorcima su rezultati bili mnogo lošiji od rezultata dobivenih nad vlastitim skupom za učenje i testiranje. Uz izgrađeni sustav za lokalizaciju i klasifikaciju promatrani su duboki modeli specifični za detekciju objekata na slici. Neki od najpoznatijih takvih modela su konvolucijske neuronske mreže temeljene na regijama (\textit{R-CNN, Fast R-CNN, Faster R-CNN,  ...}) čije već istrenirane modele nad poznatim skupovima podataka možemo pronaći u  aplikacijskom programskom sučelju \textit{TensorFlow Object Detection}. Isproban je jednostavan primjer koristeći  model \textit{You only look once} (YOLO) za detekciju objekata, no zaključeno je na testnome problemu da će kvalitetnije svoju zadaću obavljati sustav implementiran u ovome radu. U konačnici, implementirani sustav s visokim postotkom uspješnosti rješava lokalizacijske i klasifikacijske probleme rukom pisanih znamenaka odnosno identifikatora.
 
 \chapter{Zaključak}
 Cjelokupan rad se pokazao vrlo zanimljivim. Povezao je područja iz obrade slike, dubokog učenja, teorije informacija, arhitekture sustava, optimizacije i izrade aplikacija s grafičkim korisničkim sučeljem. Kako je svaki od podsustava implementiran samostalno, izradom rada dobio se uvid u mnoge aspekte iz raznih područja. Implementacijom metoda koje se svakodnevno koriste u biblioteci \textit{OpenCV} za obradu slika, osmišljanjem i implementacijom metoda za predprocesiranje i postprocesiranje pronađenih graničnih okvira, osmišljanjem arhitekture cjelokupnog sustava a zatim i optimizacijom dodano je znanstveno-istraživačko ruho radu. Mješavinom zaključaka stečenih učenjem klasifikatora i matematičkim pretpostavkama o problemu dobiveni sustav se vrlo dobro nosio s problemima lokalizacije i klasifikacije.
@@ -1176,7 +1200,7 @@ Izradom ovog rada stečen je uvid  o algoritmima koji se koriste u poznatim bibl
 \bibliography{literatura}
 
 \begin{sazetak}
-	Prepoznavanje rukom pisanih znamenaka popularno je od samih ambicioznih početaka strojnog i dubokog učenja. Ovaj rad opisuje sustav koji osim prepoznavanja vrši i lokalizaciju, odnosno vrši detekciju pojedine rukom pisane znamenke. Sustav na ulazu prima sliku rukom pisanih identifikatora koja transformira u binarnu i vrši se podebljanje kontura. Na temelju visine, širine i odnosa između graničnih okvira vrši se spajanje i filtriranje pronađenih komponenti. U fazi postprocesiranja na temelju širine okvira te sigurnosti i entropije klasifikatora pronalaze se problematični granični okviri i metodom kliznog prozora pokušavaju se razriješiti isti. Sustav je ukomponiran u aplikaciju s jednostavnim i intuitivnim grafičkim korisničkim sučeljem. Problematični granični okviri vizualno se ističu kako bi korisnik lakše uočio i ispravio eventualne pogreške sustava. Omogućeno je uređivanje pronađenih graničnih okvira i pripadnih klasifikacija. Sustav tako omogućava generiranje sve većeg skupa za učenje i ponovno treniranje mreže na novoizgrađenom skupu rukom pisanih identifikatora čime klasifikator postaje  još robusniji. 
+	Prepoznavanje rukom pisanih znamenaka popularno je od samih ambicioznih početaka strojnog i dubokog učenja. Ovaj rad opisuje sustav koji osim prepoznavanja vrši i lokalizaciju, odnosno vrši detekciju pojedine rukom pisane znamenke. Sustav na ulazu prima sliku rukom pisanih identifikatora koja transformira u binarnu i vrši se podebljanje kontura. Na temelju visine, širine i odnosa između graničnih okvira vrši se spajanje i filtriranje pronađenih komponenti. U fazi postprocesiranja na temelju širine okvira te sigurnosti i entropije klasifikatora pronalaze se problematični granični okviri i metodom kliznog prozora pokušavaju se razriješiti isti. Analiza se vrši koristeći dinamičku veličinu prozora te se na temelju zbunjenosti modela vrši podjela. Sustav je ukomponiran u aplikaciju s jednostavnim i intuitivnim grafičkim korisničkim sučeljem. Problematični granični okviri vizualno se ističu kako bi korisnik lakše uočio i ispravio eventualne pogreške sustava. Omogućeno je uređivanje pronađenih graničnih okvira i pripadnih klasifikacija. Sustav tako omogućava generiranje sve većeg skupa za učenje i ponovno treniranje mreže na novoizgrađenom skupu rukom pisanih identifikatora čime klasifikator postaje  još robusniji. 
 	
 	\kljucnerijeci{duboki modeli, konvolucijske neuronske mreže, obrada slike, lokalizacija, klasifikacija, rukom pisani identifikatori, povezane komponente, entropija, metoda kliznog prozora.}
 \end{sazetak}
@@ -1186,7 +1210,7 @@ Izradom ovog rada stečen je uvid  o algoritmima koji se koriste u poznatim bibl
 \begin{abstract}
 	  Recognition of handwritten digits is popular from the ambitious beginnings of machine and deep learning. 
 	  This paper describes a system that  apart from recognizing, also performs localization, or performs detection of  handwritten digits. The system at the entrance receives an image of handwritten identifiers that is transformed into binary 
-	  and contours of the identifiers are bolted.  Based on the height, width and relationship between the boundary boxes, merging  and filtering of the found boxes are performed. In the postprocessing phase based on the width of the box, classifier's confidence and perplexity (entropy), problematic boundary boxes are found and the sliding window method is applied to resolve these boxes. The system is wrapped in an application with a simple and intuitive graphical user interface. The problematic bounding  boxes are visually highlighted so that the user can easily detect and resolve possible system errors. Through the graphical interface it is possible to edit the found boundaries and the corresponding classifications. The system thus enables the generation of ever larger learning dataset and retraining the network on a newly built dataset of handwritten identifiers that make the classifier even more robust.
+	  and contours of the identifiers are bolted.  Based on the height, width and relationship between the boundary boxes, merging  and filtering of the found boxes are performed. In the postprocessing phase based on the width of the box, classifier's confidence and perplexity (entropy), problematic boundary boxes are found and the sliding window method is applied to resolve these boxes. The analysis is done using the dynamic size of the sliding window and based on the perplexity of the model  the division of the boundary box is performed. The system is wrapped in an application with a simple and intuitive graphical user interface. The problematic bounding  boxes are visually highlighted so that the user can easily detect and resolve possible system errors. Through the graphical interface it is possible to edit the found boundaries and the corresponding classifications. The system thus enables the generation of ever larger learning dataset and retraining the network on a newly built dataset of handwritten identifiers that make the classifier even more robust.
 	  
 \keywords{deep models, convolutional neural networks, image processing, localization, classification, handwritten identifiers, connected components, entropy, perplexity, sliding window.}
 \end{abstract}
